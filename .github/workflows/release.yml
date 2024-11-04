@@ -14,6 +14,9 @@ jobs:
       matrix:
         architecture: [x64, arm64]
 
+    env:
+      SOLUTION_FILE: google-chat-desktop.sln
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -24,32 +27,45 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ${{ env.SOLUTION_FILE }}
 
       - name: Build
-        run: dotnet build --configuration Release --runtime win-${{ matrix.architecture }}
+        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
 
       - name: Publish
-        run: dotnet publish --configuration Release --runtime win-${{ matrix.architecture }} --output ./publish
+        run: dotnet publish ${{ env.SOLUTION_FILE }} --configuration Release --runtime win-${{ matrix.architecture }} --output ./publish
 
       - name: Create zip archive
         run: |
-          mkdir google-chat-desktop
-          mv publish/* google-chat-desktop/
-          zip -r google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip google-chat-desktop
+          mkdir -p pub_temp/google-chat-desktop
+          mv publish/* pub_temp/google-chat-desktop
+          cd pub_temp
+          powershell Compress-Archive -Path google-chat-desktop -DestinationPath ../google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
+          cd ..
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
-          asset_name: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
-          asset_content_type: application/zip
+          name: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}
+          path: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
 
   create_release:
     needs: build
     runs-on: ubuntu-latest
+
     steps:
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: google-chat-desktop-x64-${{ github.ref_name }}
+          path: ./x64
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: google-chat-desktop-arm64-${{ github.ref_name }}
+          path: ./arm64
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -60,3 +76,23 @@ jobs:
           release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
+
+      - name: Upload x64 Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./x64/google-chat-desktop-x64-${{ github.ref_name }}.zip
+          asset_name: google-chat-desktop-x64-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload arm64 Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./arm64/google-chat-desktop-arm64-${{ github.ref_name }}.zip
+          asset_name: google-chat-desktop-arm64-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
