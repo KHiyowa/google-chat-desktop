@@ -1,0 +1,62 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        architecture: [x64, arm64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --runtime win${{ matrix.architecture }}
+
+      - name: Publish
+        run: dotnet publish --configuration Release --runtime win${{ matrix.architecture }} --output ./publish
+
+      - name: Create zip archive
+        run: |
+          mkdir google-chat-desktop
+          mv publish/* google-chat-desktop/
+          zip -r google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip google-chat-desktop
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
+          asset_name: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
+
+  create_release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
