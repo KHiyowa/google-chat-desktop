@@ -14,9 +14,11 @@
 		<AssemblyCopyright>© Hiyowa Records 2017-2024</AssemblyCopyright>
 		<Company>Hiyowa Records</Company>
 		<Product>Google Chat Desktop</Product>
-		<Version>3.0.0</Version>
+		<Version>3.0.1</Version>
 		<Authors>Hiyowa Kyobashi</Authors>
 		<ApplicationIcon>resources\icons\normal\windows.ico</ApplicationIcon>
+		<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+		<Platforms>x64;ARM64</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -6,6 +6,7 @@ using Microsoft.Toolkit.Uwp.Notifications;
 using google_chat_desktop.features;
 
 using Application = System.Windows.Application;
+using System.Text.Json.Serialization;
 
 
 namespace google_chat_desktop
@@ -29,6 +30,9 @@ namespace google_chat_desktop
             // Saves settings when window size or position is changed
             this.SizeChanged += MainWindow_SizeChanged;
             this.LocationChanged += MainWindow_LocationChanged;
+
+            // Add event handler for toast notification activation
+            ToastNotificationManagerCompat.OnActivated += ToastNotificationManagerCompat_OnActivated;
         }
 
         private async void InitializeWebView()
@@ -47,30 +51,64 @@ namespace google_chat_desktop
             settings.IsZoomControlEnabled = true;
             settings.AreDevToolsEnabled = true;
 
-            // Add a script that checks and requests permission for notifications
+            // Add a script that overrides the Notification object
             string script = @"
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.ready.then(function(registration) {
-                        console.log('Service Worker is ready:', registration);
-                    }).catch(function(error) {
-                        console.error('Service Worker error:', error.message, error);
-                    });
-                }
+    // TransparentNotification object
+    class TransparentNotification extends EventTarget {
+        constructor(title, options) {
+            super();
+            this.title = title;
+            this.options = options;
+        }
 
-                // Confirm and request permission for notifications
-                if (Notification.permission === 'default') {
-                    Notification.requestPermission().then(function(permission) {
-                        if (permission === 'granted') {
-                            console.log('Notification permission granted.');
-                        } else {
-                            console.log('Notification permission denied.');
-                        }
-                    });
-                } else {
-                    console.log('Notification permission:', Notification.permission);
-                }
-                ";
-            webView.CoreWebView2.ExecuteScriptAsync(script);
+        click() {
+            const event = new Event('click');
+            this.dispatchEvent(event);
+        }
+
+        close() {
+            const event = new Event('close');
+            this.dispatchEvent(event);
+        }
+    }
+
+    // Override the Notification object
+    const OriginalNotification = window.Notification;
+    const notifications = new Map();
+    window.Notification = function(title, options) {
+        // Create a notification object but do not show it
+        const notification = new TransparentNotification(title, options);
+        if (options.tag) {
+            notifications.set(options.tag, notification);
+        }
+        console.log('Notification:', JSON.stringify({ title, options }));
+        window.chrome.webview.postMessage(JSON.stringify({ title, options }));
+        return notification;
+    };
+    window.Notification.permission = OriginalNotification.permission;
+    window.Notification.requestPermission = OriginalNotification.requestPermission.bind(OriginalNotification);
+
+    // Listen for notification click events from C#
+    window.addEventListener('notificationClick', function(event) {
+        const tag = event.detail.tag;
+        const notification = notifications.get(tag);
+        if (notification) {
+            notification.dispatchEvent(new Event('click'));
+            notifications.delete(tag);
+        }
+    });
+    // Listen for notification close events from C#
+    window.addEventListener('notificationClose', function(event) {
+        const tag = event.detail.tag;
+        const notification = notifications.get(tag);
+        if (notification) {
+            notification.dispatchEvent(new Event('close'));
+            notifications.delete(tag);
+        }
+    });
+
+    ";
+            await webView.CoreWebView2.ExecuteScriptAsync(script);
         }
 
         private void CoreWebView2_PermissionRequested(object sender, CoreWebView2PermissionRequestedEventArgs e)
@@ -87,14 +125,90 @@ namespace google_chat_desktop
             }
         }
 
-
-        // Handle console messages in CoreWebView2_WebMessageReceived method
         private void CoreWebView2_WebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
-            string message = e.TryGetWebMessageAsString();
-            Debug.WriteLine($"Console message: {message}");
-            ShowNotification("Google Chat Desktop", message);
+            try
+            {
+                string message = e.WebMessageAsJson;
+                Debug.WriteLine($"Push notification received: {message}");
+
+                // エスケープされたJSON文字列を元の形式に戻す
+                string unescapedMessage = System.Text.Json.JsonSerializer.Deserialize<string>(message);
+                Debug.WriteLine($"Unescaped message: {unescapedMessage}");
+
+                // Parse the message to extract title and options
+                var notificationData = System.Text.Json.JsonSerializer.Deserialize<NotificationData>(unescapedMessage);
+                if (notificationData != null)
+                {
+                    ShowNotification(notificationData.Title, notificationData.Options.Body, notificationData.Options.Tag);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error processing web message: {ex.Message}");
+            }
         }
+
+        private void ShowNotification(string title, string message, string? tag)
+        {
+            var toastBuilder = new ToastContentBuilder()
+                .AddText(title)
+                .AddText(message);
+
+            if (!string.IsNullOrEmpty(tag))
+            {
+                toastBuilder.AddArgument("tag", tag); // tagを引数に追加
+            }
+
+            toastBuilder.Show();
+        }
+
+        private void ToastNotificationManagerCompat_OnActivated(ToastNotificationActivatedEventArgsCompat e)
+        {
+            // Parse the arguments
+            var args = ToastArguments.Parse(e.Argument);
+
+            if (args.Contains("tag"))
+            {
+                string tag = args["tag"];
+                string script = $"window.dispatchEvent(new CustomEvent('notificationClick', {{ detail: {{ tag: '{tag}' }} }}));";
+                Dispatcher.Invoke(async () => await webView.CoreWebView2.ExecuteScriptAsync(script));
+            }
+
+            // ウィンドウが非表示の場合は表示し、アクティブにする
+            Dispatcher.Invoke(() =>
+            {
+                if (this.Visibility == Visibility.Hidden)
+                {
+                    this.Show();
+                }
+                this.Activate();
+            });
+        }
+
+
+        private class NotificationData
+    {
+        [JsonPropertyName("title")]
+        public string Title { get; set; }
+
+        [JsonPropertyName("options")]
+        public NotificationOptions Options { get; set; }
+    }
+
+        private class NotificationOptions
+        {
+            [JsonPropertyName("body")]
+            public string Body { get; set; }
+
+            [JsonPropertyName("silent")]
+            public bool Silent { get; set; }
+
+            [JsonPropertyName("tag")]
+            public string? Tag { get; set; }
+        }
+
+
 
         private void CoreWebView2_NewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
@@ -127,15 +241,6 @@ namespace google_chat_desktop
             notifyIcon.ContextMenuStrip.Items.Add("Toggle", null, (s, e) => ToggleWindow(s, e));
             notifyIcon.ContextMenuStrip.Items.Add("Quit", null, (s, e) => ExitApplication(s, e));
             notifyIcon.DoubleClick += (s, e) => ToggleWindow(s, e);
-        }
-
-        private void ShowNotification(string title, string message)
-        {
-            var toastBuilder = new ToastContentBuilder()
-                .AddText(title)
-                .AddText(message);
-
-            toastBuilder.Show();
         }
 
         private void ToggleWindow(object sender, EventArgs e)
