@@ -18,6 +18,7 @@
                 <MenuItem Header="Reload" Click="Reload_Click"/>
             </MenuItem>
             <MenuItem Header="Help">
+                <MenuItem Header="Official GitHub" Click="OfficialGitHub_Click"/>
                 <MenuItem Header="About" Click="About_Click"/>
             </MenuItem>
         </Menu>

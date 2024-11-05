@@ -279,6 +279,15 @@ namespace google_chat_desktop
             webView.Reload();
         }
 
+        private void OfficialGitHub_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/KHiyowa/google-chat-desktop",
+                UseShellExecute = true
+            });
+        }
+
         private void About_Click(object sender, RoutedEventArgs e)
         {
             aboutPanel.ShowAbout();
