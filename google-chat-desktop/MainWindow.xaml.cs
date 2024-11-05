@@ -7,6 +7,7 @@ using google_chat_desktop.features;
 
 using Application = System.Windows.Application;
 using System.Text.Json.Serialization;
+using Windows.UI.Notifications;
 
 
 namespace google_chat_desktop
@@ -167,15 +168,22 @@ namespace google_chat_desktop
         {
             var toastBuilder = new ToastContentBuilder()
                 .AddText(title)
-                .AddText(message);
+                .AddText(message)
+                .AddAudio(new ToastAudio { Silent = true }); // Disable notification sound
 
             if (!string.IsNullOrEmpty(tag))
             {
-                toastBuilder.AddArgument("tag", tag); // tagを引数に追加
+                toastBuilder.AddArgument("tag", tag); // Add tag as an argument
             }
 
-            toastBuilder.Show();
+            // Create ToastNotification instance
+            var toastContent = toastBuilder.GetToastContent();
+            var toastNotification = new ToastNotification(toastContent.GetXml());
+
+            // Show the notification
+            ToastNotificationManagerCompat.CreateToastNotifier().Show(toastNotification);
         }
+
 
         private void ToastNotificationManagerCompat_OnActivated(ToastNotificationActivatedEventArgsCompat e)
         {
