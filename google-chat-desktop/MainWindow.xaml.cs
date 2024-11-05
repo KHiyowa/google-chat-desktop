@@ -198,14 +198,7 @@ namespace google_chat_desktop
             }
 
             // ウィンドウが非表示の場合は表示し、アクティブにする
-            Dispatcher.Invoke(() =>
-            {
-                if (this.Visibility == Visibility.Hidden)
-                {
-                    this.Show();
-                }
-                this.Activate();
-            });
+            ShowAndActivateWindow();
         }
 
 
@@ -262,7 +255,23 @@ namespace google_chat_desktop
 
             notifyIcon.ContextMenuStrip.Items.Add("Toggle", null, (s, e) => ToggleWindow(s, e));
             notifyIcon.ContextMenuStrip.Items.Add("Quit", null, (s, e) => ExitApplication(s, e));
-            notifyIcon.DoubleClick += (s, e) => ToggleWindow(s, e);
+            notifyIcon.DoubleClick += (s, e) => ShowAndActivateWindow();
+        }
+
+        private void ShowAndActivateWindow()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (this.Visibility == Visibility.Hidden)
+                {
+                    this.Show();
+                }
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+                this.Activate();
+            });
         }
 
         private void ToggleWindow(object sender, EventArgs e)
@@ -274,7 +283,10 @@ namespace google_chat_desktop
             else
             {
                 this.Show();
-                this.WindowState = WindowState.Normal;
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
             }
         }
 
@@ -318,7 +330,10 @@ namespace google_chat_desktop
 
         private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            windowSettings.SaveWindowSettings(this);
+            if (this.WindowState == WindowState.Normal)
+            {
+                windowSettings.SaveWindowSettings(this);
+            }
         }
 
         private void MainWindow_LocationChanged(object sender, EventArgs e)
