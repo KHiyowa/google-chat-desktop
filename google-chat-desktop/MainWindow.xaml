@@ -23,7 +23,7 @@
             </MenuItem>
         </Menu>
         <Grid>
-            <wv2:WebView2 Name="webView" Source="https://mail.google.com/chat/u/0" />
+            <wv2:WebView2 Name="webView" Source="https://mail.google.com/chat/" />
             <wfi:WindowsFormsHost Name="windowsFormsHost" HorizontalAlignment="Left" VerticalAlignment="Top" Width="0" Height="0">
                 <wf:Button Text="Click Me" />
             </wfi:WindowsFormsHost>

@@ -13,6 +13,8 @@ namespace google_chat_desktop
 {
     public partial class MainWindow : Window
     {
+        private const string ChatUrl = "https://mail.google.com/chat/";
+
         private NotifyIcon notifyIcon;
         private ContextMenu contextMenu;
         private ExternalLinks externalLinks;
@@ -41,8 +43,9 @@ namespace google_chat_desktop
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
+            webView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;
 
-            //  WebView2 Configuration
+            // WebView2 Configuration
             var settings = webView.CoreWebView2.Settings;
             settings.AreDefaultContextMenusEnabled = true;
             settings.AreDefaultScriptDialogsEnabled = true;
@@ -50,9 +53,14 @@ namespace google_chat_desktop
             settings.IsWebMessageEnabled = true;
             settings.IsZoomControlEnabled = true;
             settings.AreDevToolsEnabled = true;
+        }
 
-            // Add a script that overrides the Notification object
-            string script = @"
+        private async void CoreWebView2_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (e.IsSuccess && webView.CoreWebView2.Source.StartsWith(ChatUrl))
+            {
+                // Add a script that overrides the Notification object
+                string script = @"
     // TransparentNotification object
     class TransparentNotification extends EventTarget {
         constructor(title, options) {
@@ -108,8 +116,14 @@ namespace google_chat_desktop
     });
 
     ";
-            await webView.CoreWebView2.ExecuteScriptAsync(script);
+                await webView.CoreWebView2.ExecuteScriptAsync(script);
+            }
+            else
+            {
+                Debug.WriteLine($"Navigation failed with error code {e.WebErrorStatus}");
+            }
         }
+
 
         private void CoreWebView2_PermissionRequested(object sender, CoreWebView2PermissionRequestedEventArgs e)
         {
