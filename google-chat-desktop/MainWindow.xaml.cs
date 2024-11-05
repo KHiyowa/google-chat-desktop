@@ -14,7 +14,8 @@ namespace google_chat_desktop
 {
     public partial class MainWindow : Window
     {
-        private const string ChatUrl = "https://mail.google.com/chat/";
+        private static MainWindow instance;
+        private static readonly object lockObject = new object();
 
         private NotifyIcon notifyIcon;
         private ContextMenu contextMenu;
@@ -22,7 +23,24 @@ namespace google_chat_desktop
         private WindowSettings windowSettings;
         private AboutPanel aboutPanel;
 
-        public MainWindow()
+        private const string ChatUrl = "https://mail.google.com/chat/";
+
+        public static MainWindow Instance
+        {
+            get
+            {
+                lock (lockObject)
+                {
+                    if (instance == null)
+                    {
+                        instance = new MainWindow();
+                    }
+                    return instance;
+                }
+            }
+        }
+
+        private MainWindow()
         {
             InitializeComponent();
             windowSettings = new WindowSettings();
@@ -274,6 +292,16 @@ namespace google_chat_desktop
             });
         }
 
+        public void DisposeNotifyIcon()
+        {
+            if (notifyIcon != null)
+            {
+                notifyIcon.Visible = false;
+                notifyIcon.Dispose();
+                notifyIcon = null;
+            }
+        }
+
         private void ToggleWindow(object sender, EventArgs e)
         {
             if (this.Visibility == Visibility.Visible)
@@ -292,8 +320,7 @@ namespace google_chat_desktop
 
         public void ExitApplication(object sender, EventArgs e)
         {
-            notifyIcon.Visible = false;
-            notifyIcon.Dispose();
+            DisposeNotifyIcon();
             Application.Current.Shutdown();
         }
 
@@ -301,6 +328,12 @@ namespace google_chat_desktop
         {
             e.Cancel = true;
             this.Hide();
+        }
+
+        private void Relaunch_Click(object sender, RoutedEventArgs e)
+        {
+            var app = (App)Application.Current;
+            app.RelaunchApplication();
         }
 
         private void Quit_Click(object sender, RoutedEventArgs e)

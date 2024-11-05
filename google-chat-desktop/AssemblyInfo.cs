@@ -10,3 +10,4 @@ using System.Windows;
                                                 //(used if a resource is not found in the page,
                                                 // app, or any theme specific resource dictionaries)
 )]
+[assembly: Guid("310F9DA1-353C-4085-8864-5FE2D8628EF4")]

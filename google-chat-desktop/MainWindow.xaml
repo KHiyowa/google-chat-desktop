@@ -11,6 +11,7 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="Relaunch" Click="Relaunch_Click"/>
                 <MenuItem Header="_Quit" Click="Quit_Click"/>
             </MenuItem>
 
