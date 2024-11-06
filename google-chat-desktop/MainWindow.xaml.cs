@@ -24,6 +24,8 @@ namespace google_chat_desktop
         private AboutPanel aboutPanel;
 
         private const string ChatUrl = "https://mail.google.com/chat/";
+        private readonly Icon iconOnline = new Icon("resources/icons/normal/windows.ico");
+        private readonly Icon iconOffline = new Icon("resources/icons/offline/windows.ico");
 
         public static MainWindow Instance
         {
@@ -136,10 +138,20 @@ namespace google_chat_desktop
 
     ";
                 await webView.CoreWebView2.ExecuteScriptAsync(script);
+
+                // Change online icon
+                notifyIcon.Icon = iconOnline;
+            }
+            else if (e.IsSuccess && !webView.CoreWebView2.Source.StartsWith(ChatUrl))
+            {
+                // Change offline icon
+                notifyIcon.Icon = iconOffline;
             }
             else
             {
                 Debug.WriteLine($"Navigation failed with error code {e.WebErrorStatus}");
+                // Change offline icon
+                notifyIcon.Icon = iconOffline;
             }
         }
 
@@ -266,7 +278,7 @@ namespace google_chat_desktop
 
             notifyIcon = new NotifyIcon
             {
-                Icon = new Icon("resources/icons/normal/windows.ico"),
+                Icon = new Icon("resources/icons/offline/windows.ico"),
                 Visible = true,
                 ContextMenuStrip = new ContextMenuStrip()
             };
