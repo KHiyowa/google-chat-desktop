@@ -73,7 +73,12 @@ namespace google_chat_desktop
             settings.IsStatusBarEnabled = true;
             settings.IsWebMessageEnabled = true;
             settings.IsZoomControlEnabled = true;
+
+            #if DEBUG
             settings.AreDevToolsEnabled = true;
+            #else
+            settings.AreDevToolsEnabled = false;
+            #endif
         }
 
         private async void CoreWebView2_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
