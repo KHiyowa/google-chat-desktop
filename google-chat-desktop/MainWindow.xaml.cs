@@ -73,6 +73,8 @@ namespace google_chat_desktop
             settings.IsStatusBarEnabled = true;
             settings.IsWebMessageEnabled = true;
             settings.IsZoomControlEnabled = true;
+            settings.IsPasswordAutosaveEnabled = true;
+            settings.IsGeneralAutofillEnabled = true;
 
             #if DEBUG
             settings.AreDevToolsEnabled = true;
