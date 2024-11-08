@@ -24,7 +24,7 @@ You may use this app as you wish, but we do not promise ongoing maintenance.
 
 ### Supported Platforms
 
-The app should work on windows x86 and arm platforms, but due to lack of time; we test on most popular only.  
+The app should work on windows x64 platforms, but due to lack of time; we test on most popular only.  
 
 | OS/Platform         |    Version    |
 |:--------------------|:-------------:|
@@ -36,7 +36,9 @@ The app should work on windows x86 and arm platforms, but due to lack of time; w
     - Close the app to tray when you close the app window
 * Desktop notifications
     - Clicking on notification bring the app to focus and open the specific person chat/room
-    - Limitations: We do not use the standard Windows toast notifications in v3.0.0, so no notifications remain in Action Center.
+    - Limitations: Chat posters' icons are not displayed..
+* System tray
+    - Offline indicator (no internet or not logged-in)
 * Open external links in your OS default web browser
 * Preserve window position and size
     - Limitation: If the window is maximized, it will not be remembered correctly.
@@ -45,7 +47,6 @@ The app should work on windows x86 and arm platforms, but due to lack of time; w
 Not yet implemented in v3.0.0
 * System tray
     - Unread message indicator
-    - Offline indicator (no internet or not logged-in)
 * Unread message counter in dock
 * Auto start the app when you log in to your machine (configurable)
 * Auto check for internet on startup and keep retrying to connect every 60 seconds if offline
