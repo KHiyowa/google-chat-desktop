@@ -11,6 +11,7 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="Relaunch" Click="Relaunch_Click"/>
                 <MenuItem Header="_Quit" Click="Quit_Click"/>
             </MenuItem>
 
@@ -18,11 +19,12 @@
                 <MenuItem Header="Reload" Click="Reload_Click"/>
             </MenuItem>
             <MenuItem Header="Help">
+                <MenuItem Header="Official GitHub" Click="OfficialGitHub_Click"/>
                 <MenuItem Header="About" Click="About_Click"/>
             </MenuItem>
         </Menu>
         <Grid>
-            <wv2:WebView2 Name="webView" Source="https://mail.google.com/chat/u/0" />
+            <wv2:WebView2 Name="webView" Source="https://mail.google.com/chat/" />
             <wfi:WindowsFormsHost Name="windowsFormsHost" HorizontalAlignment="Left" VerticalAlignment="Top" Width="0" Height="0">
                 <wf:Button Text="Click Me" />
             </wfi:WindowsFormsHost>

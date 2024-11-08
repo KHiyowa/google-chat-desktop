@@ -1,8 +1,6 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows;
 
 using Application = System.Windows.Application;
@@ -23,12 +21,12 @@ namespace google_chat_desktop
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            const string appName = "GoogleChatDesktopApp";
-            bool createdNew;
+            var assembly = Assembly.GetExecutingAssembly();
+            var appGuid = assembly.GetCustomAttribute<GuidAttribute>()?.Value;
 
-            mutex = new Mutex(true, appName, out createdNew);
+            mutex = new Mutex(true, appGuid);
 
-            if (!createdNew)
+            if (!mutex.WaitOne(TimeSpan.Zero, true))
             {
                 // 既にアプリケーションが起動している場合
                 var currentProcess = Process.GetCurrentProcess();
@@ -51,12 +49,30 @@ namespace google_chat_desktop
             base.OnStartup(e);
 
             // MainWindowの初期化と表示
-            var mainWindow = new MainWindow();
+            CreateMainWindow();
+        }
+
+        private void CreateMainWindow()
+        {
+            var mainWindow = google_chat_desktop.MainWindow.Instance;
             mainWindow.InitializeNotifyIcon();
             mainWindow.Show();
         }
 
+        public void RelaunchApplication()
+        {
+            // 現在の実行ファイルのパスを取得
+            var exePath = Process.GetCurrentProcess().MainModule.FileName;
 
+            // 新しいプロセスを起動
+            Process.Start(new ProcessStartInfo(exePath)
+            {
+                UseShellExecute = true
+            });
+
+            // 現在のプロセスを終了
+            Application.Current.Shutdown();
+        }
 
         protected override void OnExit(ExitEventArgs e)
         {
@@ -65,4 +81,3 @@ namespace google_chat_desktop
         }
     }
 }
-

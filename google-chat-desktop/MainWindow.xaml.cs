@@ -7,19 +7,42 @@ using google_chat_desktop.features;
 
 using Application = System.Windows.Application;
 using System.Text.Json.Serialization;
+using Windows.UI.Notifications;
 
 
 namespace google_chat_desktop
 {
     public partial class MainWindow : Window
     {
+        private static MainWindow instance;
+        private static readonly object lockObject = new object();
+
         private NotifyIcon notifyIcon;
         private ContextMenu contextMenu;
         private ExternalLinks externalLinks;
         private WindowSettings windowSettings;
         private AboutPanel aboutPanel;
 
-        public MainWindow()
+        private const string ChatUrl = "https://mail.google.com/chat/";
+        private readonly Icon iconOnline = new Icon("resources/icons/normal/windows.ico");
+        private readonly Icon iconOffline = new Icon("resources/icons/offline/windows.ico");
+
+        public static MainWindow Instance
+        {
+            get
+            {
+                lock (lockObject)
+                {
+                    if (instance == null)
+                    {
+                        instance = new MainWindow();
+                    }
+                    return instance;
+                }
+            }
+        }
+
+        private MainWindow()
         {
             InitializeComponent();
             windowSettings = new WindowSettings();
@@ -41,18 +64,29 @@ namespace google_chat_desktop
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
+            webView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;
 
-            //  WebView2 Configuration
+            // WebView2 Configuration
             var settings = webView.CoreWebView2.Settings;
             settings.AreDefaultContextMenusEnabled = true;
             settings.AreDefaultScriptDialogsEnabled = true;
             settings.IsStatusBarEnabled = true;
             settings.IsWebMessageEnabled = true;
             settings.IsZoomControlEnabled = true;
-            settings.AreDevToolsEnabled = true;
 
-            // Add a script that overrides the Notification object
-            string script = @"
+            #if DEBUG
+            settings.AreDevToolsEnabled = true;
+            #else
+            settings.AreDevToolsEnabled = false;
+            #endif
+        }
+
+        private async void CoreWebView2_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (e.IsSuccess && webView.CoreWebView2.Source.StartsWith(ChatUrl))
+            {
+                // Add a script that overrides the Notification object
+                string script = @"
     // TransparentNotification object
     class TransparentNotification extends EventTarget {
         constructor(title, options) {
@@ -108,8 +142,24 @@ namespace google_chat_desktop
     });
 
     ";
-            await webView.CoreWebView2.ExecuteScriptAsync(script);
+                await webView.CoreWebView2.ExecuteScriptAsync(script);
+
+                // Change online icon
+                notifyIcon.Icon = iconOnline;
+            }
+            else if (e.IsSuccess && !webView.CoreWebView2.Source.StartsWith(ChatUrl))
+            {
+                // Change offline icon
+                notifyIcon.Icon = iconOffline;
+            }
+            else
+            {
+                Debug.WriteLine($"Navigation failed with error code {e.WebErrorStatus}");
+                // Change offline icon
+                notifyIcon.Icon = iconOffline;
+            }
         }
+
 
         private void CoreWebView2_PermissionRequested(object sender, CoreWebView2PermissionRequestedEventArgs e)
         {
@@ -153,15 +203,22 @@ namespace google_chat_desktop
         {
             var toastBuilder = new ToastContentBuilder()
                 .AddText(title)
-                .AddText(message);
+                .AddText(message)
+                .AddAudio(new ToastAudio { Silent = true }); // Disable notification sound
 
             if (!string.IsNullOrEmpty(tag))
             {
-                toastBuilder.AddArgument("tag", tag); // tagを引数に追加
+                toastBuilder.AddArgument("tag", tag); // Add tag as an argument
             }
 
-            toastBuilder.Show();
+            // Create ToastNotification instance
+            var toastContent = toastBuilder.GetToastContent();
+            var toastNotification = new ToastNotification(toastContent.GetXml());
+
+            // Show the notification
+            ToastNotificationManagerCompat.CreateToastNotifier().Show(toastNotification);
         }
+
 
         private void ToastNotificationManagerCompat_OnActivated(ToastNotificationActivatedEventArgsCompat e)
         {
@@ -176,14 +233,7 @@ namespace google_chat_desktop
             }
 
             // ウィンドウが非表示の場合は表示し、アクティブにする
-            Dispatcher.Invoke(() =>
-            {
-                if (this.Visibility == Visibility.Hidden)
-                {
-                    this.Show();
-                }
-                this.Activate();
-            });
+            ShowAndActivateWindow();
         }
 
 
@@ -233,14 +283,40 @@ namespace google_chat_desktop
 
             notifyIcon = new NotifyIcon
             {
-                Icon = new Icon("resources/icons/normal/windows.ico"),
+                Icon = new Icon("resources/icons/offline/windows.ico"),
                 Visible = true,
                 ContextMenuStrip = new ContextMenuStrip()
             };
 
             notifyIcon.ContextMenuStrip.Items.Add("Toggle", null, (s, e) => ToggleWindow(s, e));
             notifyIcon.ContextMenuStrip.Items.Add("Quit", null, (s, e) => ExitApplication(s, e));
-            notifyIcon.DoubleClick += (s, e) => ToggleWindow(s, e);
+            notifyIcon.DoubleClick += (s, e) => ShowAndActivateWindow();
+        }
+
+        private void ShowAndActivateWindow()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (this.Visibility == Visibility.Hidden)
+                {
+                    this.Show();
+                }
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+                this.Activate();
+            });
+        }
+
+        public void DisposeNotifyIcon()
+        {
+            if (notifyIcon != null)
+            {
+                notifyIcon.Visible = false;
+                notifyIcon.Dispose();
+                notifyIcon = null;
+            }
         }
 
         private void ToggleWindow(object sender, EventArgs e)
@@ -252,14 +328,16 @@ namespace google_chat_desktop
             else
             {
                 this.Show();
-                this.WindowState = WindowState.Normal;
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
             }
         }
 
         public void ExitApplication(object sender, EventArgs e)
         {
-            notifyIcon.Visible = false;
-            notifyIcon.Dispose();
+            DisposeNotifyIcon();
             Application.Current.Shutdown();
         }
 
@@ -267,6 +345,12 @@ namespace google_chat_desktop
         {
             e.Cancel = true;
             this.Hide();
+        }
+
+        private void Relaunch_Click(object sender, RoutedEventArgs e)
+        {
+            var app = (App)Application.Current;
+            app.RelaunchApplication();
         }
 
         private void Quit_Click(object sender, RoutedEventArgs e)
@@ -279,6 +363,15 @@ namespace google_chat_desktop
             webView.Reload();
         }
 
+        private void OfficialGitHub_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/KHiyowa/google-chat-desktop",
+                UseShellExecute = true
+            });
+        }
+
         private void About_Click(object sender, RoutedEventArgs e)
         {
             aboutPanel.ShowAbout();
@@ -287,7 +380,10 @@ namespace google_chat_desktop
 
         private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            windowSettings.SaveWindowSettings(this);
+            if (this.WindowState == WindowState.Normal)
+            {
+                windowSettings.SaveWindowSettings(this);
+            }
         }
 
         private void MainWindow_LocationChanged(object sender, EventArgs e)
