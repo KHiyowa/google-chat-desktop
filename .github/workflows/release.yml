@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        architecture: [x64, arm64]
+        architecture: [x64]
 
     env:
       SOLUTION_FILE: google-chat-desktop.sln
@@ -60,12 +60,6 @@ jobs:
           name: google-chat-desktop-x64-${{ github.ref_name }}
           path: ./x64
 
-      - name: Download arm64 artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: google-chat-desktop-arm64-${{ github.ref_name }}
-          path: ./arm64
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -85,14 +79,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./x64/google-chat-desktop-x64-${{ github.ref_name }}.zip
           asset_name: google-chat-desktop-x64-${{ github.ref_name }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload arm64 Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./arm64/google-chat-desktop-arm64-${{ github.ref_name }}.zip
-          asset_name: google-chat-desktop-arm64-${{ github.ref_name }}.zip
           asset_content_type: application/zip
