@@ -33,10 +33,10 @@ The app should work on windows x64 platforms, but due to lack of time; we test o
 ### Major features
 
 * System tray
+    - Unread message indicator
     - Close the app to tray when you close the app window
 * Desktop notifications
     - Clicking on notification bring the app to focus and open the specific person chat/room
-    - Limitations: Chat posters' icons are not displayed..
 * System tray
     - Offline indicator (no internet or not logged-in)
 * Open external links in your OS default web browser
@@ -44,9 +44,7 @@ The app should work on windows x64 platforms, but due to lack of time; we test o
     - Limitation: If the window is maximized, it will not be remembered correctly.
 * Prevent multiple chat app instances from running
 
-Not yet implemented in v3.0.0
-* System tray
-    - Unread message indicator
+Not yet implemented in v3.0.3
 * Unread message counter in dock
 * Auto start the app when you log in to your machine (configurable)
 * Auto check for internet on startup and keep retrying to connect every 60 seconds if offline
