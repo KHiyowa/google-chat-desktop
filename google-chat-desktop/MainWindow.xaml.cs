@@ -29,7 +29,8 @@ namespace google_chat_desktop
 
         private const string iconCacheFolderName = "iconCache";
         private const string ChatUrl = "https://mail.google.com/chat/";
-        private readonly Icon iconOnline = new Icon("resources/icons/normal/windows.ico");
+        private readonly Icon iconBadge = new Icon("resources/icons/badge/windows.ico");
+        private readonly Icon iconNormal = new Icon("resources/icons/normal/windows.ico");
         private readonly Icon iconOffline = new Icon("resources/icons/offline/windows.ico");
 
 
@@ -102,6 +103,19 @@ namespace google_chat_desktop
             {
                 // Add a script that overrides the Notification object
                 string script = @"
+                // Function to fetch and convert image to Base64
+                async function getBase64Image(url) {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const mimeType = blob.type; // 画像のMIMEタイプを取得
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve({ base64: reader.result.split(',')[1], mimeType });
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                }
+
                 // TransparentNotification object
                 class TransparentNotification extends EventTarget {
                     constructor(title, options) {
@@ -131,19 +145,6 @@ namespace google_chat_desktop
                         notifications.set(options.tag, notification);
                     }
 
-                    // Function to fetch and convert image to Base64
-                    async function getBase64Image(url) {
-                        const response = await fetch(url);
-                        const blob = await response.blob();
-                        const mimeType = blob.type; // 画像のMIMEタイプを取得
-                        return new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve({ base64: reader.result.split(',')[1], mimeType });
-                            reader.onerror = reject;
-                            reader.readAsDataURL(blob);
-                        });
-                    }
-
                     // Fetch icon data if available
                     (async () => {
                         let iconData = null;
@@ -156,6 +157,7 @@ namespace google_chat_desktop
                         }
 
                         const message = {
+                            type: 'notification',
                             title,
                             options: {
                                 ...options,
@@ -193,22 +195,64 @@ namespace google_chat_desktop
                     }
                 });
 
+                // Function to get the current favicon URL
+                function getFaviconUrl() {
+                    const link = document.querySelector(""link[rel~='icon']"");
+                    return link ? link.href : null;
+                }
+
+                // Function to evaluate favicon state
+                function evaluateFaviconState(faviconUrl) {
+                    const fileName = faviconUrl.split('/').pop().toLowerCase();
+                    if (fileName.includes('chat') && fileName.includes('new') && fileName.includes('notif')) {
+                        return 'badge';
+                    } else if (fileName.includes('chat')) {
+                        return 'normal';
+                    } else {
+                        return 'offline';
+                    }
+                }
+
+                // Function to monitor favicon changes
+                async function monitorFavicon() {
+                    let lastFaviconUrl = getFaviconUrl();
+
+                    // 初回実行時に現在のfaviconの状態を通知
+                    if (lastFaviconUrl) {
+                        const initialFaviconState = evaluateFaviconState(lastFaviconUrl);
+                        const initialMessage = {
+                            type: 'favicon',
+                            state: initialFaviconState
+                        };
+                        window.chrome.webview.postMessage(JSON.stringify(initialMessage));
+                    }
+
+                    setInterval(async () => {
+                        const currentFaviconUrl = getFaviconUrl();
+                        if (currentFaviconUrl && currentFaviconUrl !== lastFaviconUrl) {
+                            lastFaviconUrl = currentFaviconUrl;
+                            const faviconState = evaluateFaviconState(currentFaviconUrl);
+                            const message = {
+                                type: 'favicon',
+                                state: faviconState
+                            };
+                            window.chrome.webview.postMessage(JSON.stringify(message));
+                        }
+                    }, 1000); // 1秒ごとにチェック
+                }
+
+                // Start monitoring favicon changes
+                monitorFavicon();
+
                 ";
                 await webView.CoreWebView2.ExecuteScriptAsync(script);
-
-                // Change online icon
-                notifyIcon.Icon = iconOnline;
             }
             else if (e.IsSuccess && !webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
-                // Change offline icon
-                notifyIcon.Icon = iconOffline;
             }
             else
             {
                 Debug.WriteLine($"Navigation failed with error code {e.WebErrorStatus}");
-                // Change offline icon
-                notifyIcon.Icon = iconOffline;
             }
         }
 
@@ -232,23 +276,59 @@ namespace google_chat_desktop
             try
             {
                 string message = e.WebMessageAsJson;
-                Debug.WriteLine($"Push notification received: {message}");
+                Debug.WriteLine($"Message received: {message}");
 
                 // エスケープされたJSON文字列を元の形式に戻す
                 string unescapedMessage = System.Text.Json.JsonSerializer.Deserialize<string>(message);
                 Debug.WriteLine($"Unescaped message: {unescapedMessage}");
 
-                // Parse the message to extract title and options
-                var notificationData = System.Text.Json.JsonSerializer.Deserialize<NotificationData>(unescapedMessage);
-                if (notificationData != null)
+                // Parse the message to extract type and data
+                var messageData = System.Text.Json.JsonSerializer.Deserialize<FaviconData>(unescapedMessage);
+                if (messageData != null)
                 {
-                    var iconUri = CreateImageUri(notificationData.Options.IconBase64, notificationData.Options.IconMimeType);
-                    ShowNotification(
-                        title: notificationData.Title,
-                        message: notificationData.Options.Body,
-                        tag: notificationData.Options.Tag,
-                        iconUri: iconUri
-                    );
+                    switch (messageData.Type)
+                    {
+                        case "notification":
+                            {
+                                var notificationData = System.Text.Json.JsonSerializer.Deserialize<NotificationData>(unescapedMessage);
+                                if (notificationData != null)
+                                {
+                                    var iconUri = CreateImageUri(notificationData.Options.IconBase64, notificationData.Options.IconMimeType);
+                                    ShowNotification(
+                                        title: notificationData.Title,
+                                        message: notificationData.Options.Body,
+                                        tag: notificationData.Options.Tag,
+                                        iconUri: iconUri
+                                    );
+                                }
+                                break;
+                            }
+
+                        case "favicon":
+                            {
+                                // ここでfaviconの状態に応じた処理を行う
+                                Debug.WriteLine($"Favicon state: {messageData.State}");
+
+                                // タスクトレイアイコンを更新
+                                switch (messageData.State)
+                                {
+                                    case "badge":
+                                        notifyIcon.Icon = iconBadge;
+                                        break;
+                                    case "normal":
+                                        notifyIcon.Icon = iconNormal;
+                                        break;
+                                    case "offline":
+                                        notifyIcon.Icon = iconOffline;
+                                        break;
+                                }
+                                break;
+                            }
+
+                        default:
+                            Debug.WriteLine($"Unknown message type: {messageData.Type}");
+                            break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -335,10 +415,6 @@ namespace google_chat_desktop
             }
         }
 
-
-
-
-
         private void ToastNotificationManagerCompat_OnActivated(ToastNotificationActivatedEventArgsCompat e)
         {
             // Parse the arguments
@@ -355,6 +431,14 @@ namespace google_chat_desktop
             ShowAndActivateWindow();
         }
 
+        private class FaviconData
+        {
+            [JsonPropertyName("type")]
+            public string Type { get; set; }
+
+            [JsonPropertyName("state")]
+            public string State { get; set; }
+        }
 
         private class NotificationData
     {

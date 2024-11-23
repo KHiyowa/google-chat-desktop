@@ -46,6 +46,9 @@
 	    <Generator>SettingsSingleFileGenerator</Generator>
 	    <LastGenOutput>Settings.Designer.cs</LastGenOutput>
 	  </None>
+	  <None Update="resources\icons\badge\windows.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	  <None Update="resources\icons\offline\windows.ico">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
