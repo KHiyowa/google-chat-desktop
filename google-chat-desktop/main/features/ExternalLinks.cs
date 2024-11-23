@@ -3,7 +3,7 @@ using Microsoft.Web.WebView2.Core;
 
 // This code is based on https://github.com/ankurk91/google-chat-electron/blob/2.20.0/src/main/features/externalLinks.ts
 
-namespace google_chat_desktop.features
+namespace google_chat_desktop.main.features
 {
     internal class ExternalLinks
     {

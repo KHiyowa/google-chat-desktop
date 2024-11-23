@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Windows;
 
-namespace google_chat_desktop.features
+namespace google_chat_desktop.main.features
 {
     public class AboutPanel
     {

@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace google_chat_desktop.features
+namespace google_chat_desktop.main.features
 {
     internal class WindowSettings
     {
@@ -38,7 +38,7 @@ namespace google_chat_desktop.features
 
         public void SaveWindowSettings(Window window)
         {
-            var screen = Screen.FromRectangle(new System.Drawing.Rectangle(
+            var screen = Screen.FromRectangle(new Rectangle(
                 (int)window.Left,
                 (int)window.Top,
                 (int)window.Width,
