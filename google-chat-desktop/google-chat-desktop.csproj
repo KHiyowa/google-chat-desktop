@@ -14,7 +14,7 @@
 		<AssemblyCopyright>© Hiyowa Records 2017-2024</AssemblyCopyright>
 		<Company>Hiyowa Records</Company>
 		<Product>Google Chat Desktop</Product>
-		<Version>3.0.2</Version>
+		<Version>3.0.3</Version>
 		<Authors>Hiyowa Kyobashi</Authors>
 		<ApplicationIcon>resources\icons\normal\windows.ico</ApplicationIcon>
 		<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
@@ -31,6 +31,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2849.39" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -42,9 +43,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Update="main\load\load.js">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	  <None Update="Properties\Settings.settings">
 	    <Generator>SettingsSingleFileGenerator</Generator>
 	    <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+	  </None>
+	  <None Update="resources\icons\badge\windows.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
 	  <None Update="resources\icons\offline\windows.ico">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
