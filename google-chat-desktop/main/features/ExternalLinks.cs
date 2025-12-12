@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using Microsoft.Web.WebView2.Core;
-
-// This code is based on https://github.com/ankurk91/google-chat-electron/blob/2.20.0/src/main/features/externalLinks.ts
+using System.Windows;
 
 namespace google_chat_desktop.main.features
 {
@@ -11,42 +10,82 @@ namespace google_chat_desktop.main.features
 
         public void HandleNewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
-            Uri uri = new Uri(e.Uri);
+            Uri? uri = null;
+            bool shouldOpenExternally = true;
 
-            // If the URL is not a valid HTTP or HTTPS URL
-            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            try
             {
-                e.Handled = true;
-                Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
-                return;
+                uri = new Uri(e.Uri);
+            }
+            catch
+            {
             }
 
-            // If the URL is not in the list of allowed host domains
-            if (!Array.Exists(allowedDomains, domain => uri.Host.Contains(domain)))
+            if (uri != null)
             {
-                e.Handled = true;
-                Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
-                return;
+                bool isHttp = (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+                bool isAllowedDomain = Array.Exists(allowedDomains, domain => uri.Host.Contains(domain));
+
+                bool isMailChat = (uri.Host == "mail.google.com" && uri.AbsoluteUri.StartsWith("https://mail.google.com/chat"));
+                bool isChatApi = (uri.Host == "chat.google.com" && uri.AbsoluteUri.Contains("https://chat.google.com/u/0/api/get_attachment_url"));
+
+                if (isHttp && isAllowedDomain && !isMailChat && !isChatApi)
+                {
+                    shouldOpenExternally = false;
+                }
             }
 
-            // If the URL is 'mail.google.com' but does not start with https://mail.google.com/chat
-            if (uri.Host == "mail.google.com" && !uri.AbsoluteUri.StartsWith("https://mail.google.com/chat"))
+            if (shouldOpenExternally)
             {
-                e.Handled = true;
-                Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
-                return;
+                e.Handled = true; // open externally
+                OpenUrlSafely(e.Uri);
             }
-
-            // If the URL is 'chat.google.com' but contains https://chat.google.com/u/0/api/get_attachment_url
-            if (uri.Host == "chat.google.com" && uri.AbsoluteUri.Contains("https://chat.google.com/u/0/api/get_attachment_url"))
+            else
             {
-                e.Handled = true;
-                Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
-                return;
+                e.Handled = false; // open in WebView
             }
+        }
 
-            // If the domain is allowed, open within WebView
-            e.Handled = false;
+
+        private static void OpenUrlSafely(string url)
+        {
+            try
+            {
+                // 1: Normal run
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex1)
+            {
+                // 2: Via cmd start
+                try
+                {
+                    // /c : Close the command prompt after the command is run
+                    // start : Open with default associated application
+                    // "" : Dummy title for the cmd window
+                    // "{url}" : Handle URLs with spaces
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "cmd",
+                        Arguments = $"/c start \"\" \"{url}\"",
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    };
+                    Process.Start(psi);
+                }
+                catch (Exception ex2)
+                {
+                    // Notify user about the failure
+                    string errorMsg = $"Cannot open link\n\n" +
+                                      $"URL: {url}\n\n" +
+                                      $"[Error]\n" +
+                                      $"Normal run {ex1.Message}\n" +
+                                      $"Via cmd {ex2.Message}\n\n" +
+                                      $"Please report developer with screen shot of this window!";
+
+                    System.Windows.MessageBox.Show(errorMsg, "External link error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
     }
 }
