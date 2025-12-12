@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
@@ -44,7 +44,7 @@ jobs:
           cd ..
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}
           path: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Download x64 artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: google-chat-desktop-x64-${{ github.ref_name }}
           path: ./x64
