@@ -11,10 +11,10 @@
 		<Title>Google Chat Desktop</Title>
 		<AssemblyTitle>Google Chat Desktop</AssemblyTitle>
 		<AssemblyDescription>Google Chat Desktop Application</AssemblyDescription>
-		<AssemblyCopyright>© Hiyowa Records 2017-2024</AssemblyCopyright>
+		<AssemblyCopyright>© Hiyowa Records 2017-2025</AssemblyCopyright>
 		<Company>Hiyowa Records</Company>
 		<Product>Google Chat Desktop</Product>
-		<Version>3.0.3</Version>
+		<Version>3.0.4</Version>
 		<Authors>Hiyowa Kyobashi</Authors>
 		<ApplicationIcon>resources\icons\normal\windows.ico</ApplicationIcon>
 		<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
