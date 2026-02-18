@@ -29,7 +29,7 @@ namespace google_chat_desktop
         private AboutPanel aboutPanel;
 
         private const string iconCacheFolderName = "iconCache";
-        private const string ChatUrl = "https://mail.google.com/chat/";
+        private const string ChatUrl = "https://chat.google.com/";
         private readonly Icon iconBadge = new Icon("resources/icons/badge/windows.ico");
         private readonly Icon iconNormal = new Icon("resources/icons/normal/windows.ico");
         private readonly Icon iconOffline = new Icon("resources/icons/offline/windows.ico");
