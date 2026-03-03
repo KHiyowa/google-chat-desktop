@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Toolkit.Uwp.Notifications;
+using CommunityToolkit.WinUI.Notifications;
 using Microsoft.Web.WebView2.Core;
 using Windows.UI.Notifications;
 
@@ -23,7 +23,6 @@ namespace google_chat_desktop
         private static readonly Dictionary<string, Uri> onMemoryIconCache = new Dictionary<string, Uri>();
 
         private NotifyIcon notifyIcon;
-        private ContextMenu contextMenu;
         private ExternalLinks externalLinks;
         private WindowSettings windowSettings;
         private AboutPanel aboutPanel;
@@ -218,8 +217,7 @@ namespace google_chat_desktop
             }
 
             // Create ToastNotification instance
-            var toastContent = toastBuilder.GetToastContent();
-            var toastNotification = new ToastNotification(toastContent.GetXml());
+            var toastNotification = new ToastNotification(toastBuilder.GetXml());
 
             // Show the notification
             ToastNotificationManagerCompat.CreateToastNotifier().Show(toastNotification);
@@ -340,16 +338,6 @@ namespace google_chat_desktop
 
         public void InitializeNotifyIcon()
         {
-            contextMenu = new ContextMenu();
-
-            MenuItem toggleMenuItem = new MenuItem { Header = "Toggle" };
-            toggleMenuItem.Click += ToggleWindow;
-            contextMenu.Items.Add(toggleMenuItem);
-
-            MenuItem quitMenuItem = new MenuItem { Header = "Quit" };
-            quitMenuItem.Click += ExitApplication;
-            contextMenu.Items.Add(quitMenuItem);
-
             notifyIcon = new NotifyIcon
             {
                 Icon = new Icon("resources/icons/offline/windows.ico"),
