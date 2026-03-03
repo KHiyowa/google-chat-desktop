@@ -21,6 +21,7 @@ namespace google_chat_desktop
         private static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
         private static readonly string tempFolderPath = System.IO.Path.Combine(appDirectory, "temp");
         private static readonly Dictionary<string, Uri> onMemoryIconCache = new Dictionary<string, Uri>();
+        private static readonly List<FileStream> _iconStreams = new List<FileStream>();
 
         private NotifyIcon notifyIcon;
         private ExternalLinks externalLinks;
@@ -254,12 +255,11 @@ namespace google_chat_desktop
                     string iconCachePath = System.IO.Path.Combine(tempFolderPath, iconCacheFolderName);
                     string tempFilePath = System.IO.Path.Combine(iconCachePath, $"{hashString}.{fileExtension}");
 
-                    // ファイルが既に存在するか確認
-                    if (!System.IO.File.Exists(tempFilePath))
-                    {
-                        // バイト配列をファイルに書き込む
-                        System.IO.File.WriteAllBytes(tempFilePath, imageBytes);
-                    }
+                    // FileOptions.DeleteOnClose を使用してファイルを作成し、プロセス終了時に自動削除されるようにする
+                    var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+                    fs.Write(imageBytes, 0, imageBytes.Length);
+                    fs.Flush();
+                    _iconStreams.Add(fs);
 
                     // ファイルのUriをキャッシュに追加
                     Uri fileUri = new Uri(tempFilePath);
@@ -410,6 +410,13 @@ namespace google_chat_desktop
         public void ExitApplication(object sender, EventArgs e)
         {
             DisposeNotifyIcon();
+
+            foreach (var stream in _iconStreams)
+            {
+                stream.Dispose();
+            }
+            _iconStreams.Clear();
+
             DeleteTempFolder();
             Application.Current.Shutdown();
         }
