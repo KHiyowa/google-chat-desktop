@@ -76,6 +76,18 @@ namespace google_chat_desktop
         private async void InitializeWebView()
         {
             await webView.EnsureCoreWebView2Async(null);
+
+            // Netskope環境等でのパフォーマンス低下対策として、起動時にログインクッキー以外（キャッシュ、Service Worker等）を削除する
+            try
+            {
+                // LocalStorageやIndexedDBを消すとセッション切れと判定されることがあるため、純粋なキャッシュのみを削除する
+                await webView.CoreWebView2.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache | CoreWebView2BrowsingDataKinds.CacheStorage);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to clear browsing data: {ex.Message}");
+            }
+
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
