@@ -83,6 +83,19 @@ namespace google_chat_desktop
                 Debug.WriteLine($"Failed to clear browsing data: {ex.Message}");
             }
 
+            // 事前に通知権限を許可設定にする（ユーザーへのプロンプトを回避し、拒否状態も上書きする）
+            try
+            {
+                await webView.CoreWebView2.Profile.SetPermissionStateAsync(
+                    CoreWebView2PermissionKind.Notifications,
+                    ChatUrl.TrimEnd('/'), // 末尾のスラッシュを除去してオリジン形式にする
+                    CoreWebView2PermissionState.Allow);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to set permission state: {ex.Message}");
+            }
+
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
