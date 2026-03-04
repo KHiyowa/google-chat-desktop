@@ -6,16 +6,19 @@ on:
       - '*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
-
     strategy:
       matrix:
-        architecture: [x64]
+        architecture: [x64, arm64]
 
     env:
-      SOLUTION_FILE: google-chat-desktop.sln
+      PROJECT_FILE_PATH: google-chat-desktop/google-chat-desktop.csproj
+      DOTNET_VERSION: '10.0.x'
 
     steps:
       - name: Checkout repository
@@ -24,59 +27,45 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore ${{ env.SOLUTION_FILE }}
+        run: dotnet restore ${{ env.PROJECT_FILE_PATH }} -r win-${{ matrix.architecture }}
 
       - name: Build
-        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
+        run: dotnet build ${{ env.PROJECT_FILE_PATH }} --configuration Release --no-restore -r win-${{ matrix.architecture }}
 
       - name: Publish
-        run: dotnet publish ${{ env.SOLUTION_FILE }} --configuration Release --runtime win-${{ matrix.architecture }} --output ./publish
+        run: dotnet publish ${{ env.PROJECT_FILE_PATH }} --configuration Release --runtime win-${{ matrix.architecture }} --output ./publish_temp/google-chat-desktop --no-build --self-contained true
 
       - name: Create zip archive
         run: |
-          mkdir -p pub_temp/google-chat-desktop
-          mv publish/* pub_temp/google-chat-desktop
-          cd pub_temp
-          powershell Compress-Archive -Path google-chat-desktop -DestinationPath ../google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
-          cd ..
+          Compress-Archive -Path ./publish_temp/google-chat-desktop -DestinationPath ./google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}
-          path: google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
+          name: release-asset-${{ matrix.architecture }}
+          path: ./google-chat-desktop-${{ matrix.architecture }}-${{ github.ref_name }}.zip
 
   create_release:
     needs: build
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Download x64 artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: google-chat-desktop-x64-${{ github.ref_name }}
-          path: ./x64
+          pattern: release-asset-*
+          merge-multiple: true
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: google-chat-desktop-*-${{ github.ref_name }}.zip
           draft: false
           prerelease: false
-
-      - name: Upload x64 Release Asset
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./x64/google-chat-desktop-x64-${{ github.ref_name }}.zip
-          asset_name: google-chat-desktop-x64-${{ github.ref_name }}.zip
-          asset_content_type: application/zip

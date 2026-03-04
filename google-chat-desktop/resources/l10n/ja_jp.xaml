@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="Menu_File">ファイル(_F)</sys:String>
+    <sys:String x:Key="Menu_Relaunch">再起動</sys:String>
+    <sys:String x:Key="Menu_Quit">終了(_Q)</sys:String>
+    <sys:String x:Key="Menu_View">表示</sys:String>
+    <sys:String x:Key="Menu_Reload">再読み込み</sys:String>
+    <sys:String x:Key="Menu_Help">ヘルプ</sys:String>
+    <sys:String x:Key="Menu_OfficialGitHub">公式GitHub</sys:String>
+    <sys:String x:Key="Menu_About">バージョン情報</sys:String>
+    <sys:String x:Key="Tray_Toggle">表示切り替え</sys:String>
+    <sys:String x:Key="Tray_Quit">終了</sys:String>
+</ResourceDictionary>

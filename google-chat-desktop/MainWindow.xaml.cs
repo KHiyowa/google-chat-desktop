@@ -1,38 +1,36 @@
-﻿using System.Diagnostics;
+﻿using CommunityToolkit.WinUI.Notifications;
+using google_chat_desktop.main.features;
+using Microsoft.Web.WebView2.Core;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
-using System.Windows.Controls;
-using Microsoft.Toolkit.Uwp.Notifications;
-using Microsoft.Web.WebView2.Core;
 using Windows.UI.Notifications;
-
-using google_chat_desktop.main.features;
-
 using Application = System.Windows.Application;
 
 namespace google_chat_desktop
 {
     public partial class MainWindow : Window
     {
-        private static MainWindow instance;
-        private static readonly object lockObject = new object();
+        private static MainWindow? instance;
+        private static readonly Lock lockObject = new();
         private static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        private static readonly string tempFolderPath = System.IO.Path.Combine(appDirectory, "temp");
-        private static readonly Dictionary<string, Uri> onMemoryIconCache = new Dictionary<string, Uri>();
+        private static readonly string tempFolderPath = Path.Combine(appDirectory, "temp");
+        private static readonly Dictionary<string, Uri> onMemoryIconCache = []; // Key: SHA256 Hash
+        private static readonly List<FileStream> _iconStreams = [];
 
-        private NotifyIcon notifyIcon;
-        private ContextMenu contextMenu;
-        private ExternalLinks externalLinks;
-        private WindowSettings windowSettings;
-        private AboutPanel aboutPanel;
+        private NotifyIcon? notifyIcon;
+        private ExternalLinks? externalLinks;
+        private readonly WindowSettings windowSettings;
+        private readonly AboutPanel aboutPanel;
 
         private const string iconCacheFolderName = "iconCache";
         private const string ChatUrl = "https://chat.google.com/";
-        private readonly Icon iconBadge = new Icon("resources/icons/badge/windows.ico");
-        private readonly Icon iconNormal = new Icon("resources/icons/normal/windows.ico");
-        private readonly Icon iconOffline = new Icon("resources/icons/offline/windows.ico");
+        private readonly Icon iconBadge = new("resources/icons/badge/windows.ico");
+        private readonly Icon iconNormal = new("resources/icons/normal/windows.ico");
+        private readonly Icon iconOffline = new("resources/icons/offline/windows.ico");
 
 
         public static MainWindow Instance
@@ -41,10 +39,7 @@ namespace google_chat_desktop
             {
                 lock (lockObject)
                 {
-                    if (instance == null)
-                    {
-                        instance = new MainWindow();
-                    }
+                    instance ??= new MainWindow();
                     return instance;
                 }
             }
@@ -54,7 +49,7 @@ namespace google_chat_desktop
         {
             InitializeComponent();
             windowSettings = new WindowSettings();
-            windowSettings.LoadWindowSettings(this);
+            WindowSettings.LoadWindowSettings(this);
             InitializeWebView();
             aboutPanel = new AboutPanel();
 
@@ -66,16 +61,41 @@ namespace google_chat_desktop
             ToastNotificationManagerCompat.OnActivated += ToastNotificationManagerCompat_OnActivated;
 
             // 一時フォルダとアイコンキャッシュフォルダが存在しない場合は作成
-            string iconCachePath = System.IO.Path.Combine(tempFolderPath, iconCacheFolderName);
-            if (!System.IO.Directory.Exists(iconCachePath))
+            string iconCachePath = Path.Combine(tempFolderPath, iconCacheFolderName);
+            if (!Directory.Exists(iconCachePath))
             {
-                System.IO.Directory.CreateDirectory(iconCachePath);
+                Directory.CreateDirectory(iconCachePath);
             }
         }
 
         private async void InitializeWebView()
         {
             await webView.EnsureCoreWebView2Async(null);
+
+            // Netskope環境等でのパフォーマンス低下対策として、起動時にログインクッキー以外（キャッシュ、Service Worker等）を削除する
+            try
+            {
+                // LocalStorageやIndexedDBを消すとセッション切れと判定されることがあるため、純粋なキャッシュのみを削除する
+                await webView.CoreWebView2.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache | CoreWebView2BrowsingDataKinds.CacheStorage);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to clear browsing data: {ex.Message}");
+            }
+
+            // 事前に通知権限を許可設定にする（ユーザーへのプロンプトを回避し、拒否状態も上書きする）
+            try
+            {
+                await webView.CoreWebView2.Profile.SetPermissionStateAsync(
+                    CoreWebView2PermissionKind.Notifications,
+                    ChatUrl.TrimEnd('/'), // 末尾のスラッシュを除去してオリジン形式にする
+                    CoreWebView2PermissionState.Allow);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to set permission state: {ex.Message}");
+            }
+
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
@@ -98,7 +118,7 @@ namespace google_chat_desktop
             #endif
         }
 
-        private async void CoreWebView2_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        private async void CoreWebView2_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             if (e.IsSuccess && webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
@@ -109,17 +129,17 @@ namespace google_chat_desktop
             }
             else if (e.IsSuccess && !webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
-                notifyIcon.Icon = iconOffline;
+                if (notifyIcon != null) notifyIcon.Icon = iconOffline;
             }
             else
             {
                 Debug.WriteLine($"Navigation failed with error code {e.WebErrorStatus}");
-                notifyIcon.Icon = iconOffline;
+                if (notifyIcon != null) notifyIcon.Icon = iconOffline;
             }
         }
 
 
-        private void CoreWebView2_PermissionRequested(object sender, CoreWebView2PermissionRequestedEventArgs e)
+        private void CoreWebView2_PermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
         {
             if (e.PermissionKind == CoreWebView2PermissionKind.Notifications)
             {
@@ -133,62 +153,73 @@ namespace google_chat_desktop
             }
         }
 
-        private void CoreWebView2_WebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        private void CoreWebView2_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             try
             {
                 string message = e.WebMessageAsJson;
                 Debug.WriteLine($"Message received: {message}");
 
-                // エスケープされたJSON文字列を元の形式に戻す
-                string unescapedMessage = System.Text.Json.JsonSerializer.Deserialize<string>(message);
+                // Unescape the JSON string which is stringified twice from JS
+                string? unescapedMessage = JsonSerializer.Deserialize<string>(message);
+                if (unescapedMessage == null) return;
                 Debug.WriteLine($"Unescaped message: {unescapedMessage}");
 
-                // Parse the message to extract type and data
-                var messageData = System.Text.Json.JsonSerializer.Deserialize<FaviconData>(unescapedMessage);
-                if (messageData != null)
+                // Parse once to avoid redundant deserialization
+                using (JsonDocument doc = JsonDocument.Parse(unescapedMessage))
                 {
-                    switch (messageData.Type)
+                    JsonElement root = doc.RootElement;
+                    if (!root.TryGetProperty("type", out JsonElement typeElement) || typeElement.GetString() is not { } messageType)
+                    {
+                        Debug.WriteLine("Received web message without a 'type' property.");
+                        return;
+                    }
+
+                    switch (messageType)
                     {
                         case "notification":
                             {
-                                var notificationData = System.Text.Json.JsonSerializer.Deserialize<NotificationData>(unescapedMessage);
-                                if (notificationData != null)
-                                {
-                                    var iconUri = CreateImageUri(notificationData.Options.IconBase64, notificationData.Options.IconMimeType);
-                                    ShowNotification(
-                                        title: notificationData.Title,
-                                        message: notificationData.Options.Body,
-                                        tag: notificationData.Options.Tag,
-                                        iconUri: iconUri
-                                    );
-                                }
+                                var notificationData = root.Deserialize<NotificationData>();
+                                if (notificationData?.Title == null || notificationData.Options?.Body == null) break;
+
+                                var iconUri = CreateImageUri(notificationData.Options.IconBase64, notificationData.Options.IconMimeType);
+                                ShowNotification(
+                                    title: notificationData.Title,
+                                    message: notificationData.Options.Body,
+                                    tag: notificationData.Options.Tag,
+                                    iconUri: iconUri
+                                );
                                 break;
                             }
 
                         case "favicon":
                             {
-                                // ここでfaviconの状態に応じた処理を行う
-                                Debug.WriteLine($"Favicon state: {messageData.State}");
+                                var faviconData = root.Deserialize<FaviconData>();
+                                if (faviconData?.State == null) break;
+
+                                Debug.WriteLine($"Favicon state: {faviconData.State}");
 
                                 // タスクトレイアイコンを更新
-                                switch (messageData.State)
+                                if (notifyIcon != null)
                                 {
-                                    case "badge":
-                                        notifyIcon.Icon = iconBadge;
-                                        break;
-                                    case "normal":
-                                        notifyIcon.Icon = iconNormal;
-                                        break;
-                                    case "offline":
-                                        notifyIcon.Icon = iconOffline;
-                                        break;
+                                    switch (faviconData.State)
+                                    {
+                                        case "badge":
+                                            notifyIcon.Icon = iconBadge;
+                                            break;
+                                        case "normal":
+                                            notifyIcon.Icon = iconNormal;
+                                            break;
+                                        case "offline":
+                                            notifyIcon.Icon = iconOffline;
+                                            break;
+                                    }
                                 }
                                 break;
                             }
 
                         default:
-                            Debug.WriteLine($"Unknown message type: {messageData.Type}");
+                            Debug.WriteLine($"Unknown message type: {messageType}");
                             break;
                     }
                 }
@@ -218,8 +249,7 @@ namespace google_chat_desktop
             }
 
             // Create ToastNotification instance
-            var toastContent = toastBuilder.GetToastContent();
-            var toastNotification = new ToastNotification(toastContent.GetXml());
+            var toastNotification = new ToastNotification(toastBuilder.GetXml());
 
             // Show the notification
             ToastNotificationManagerCompat.CreateToastNotifier().Show(toastNotification);
@@ -234,12 +264,6 @@ namespace google_chat_desktop
 
             try
             {
-                // キャッシュに存在するか確認
-                if (onMemoryIconCache.TryGetValue(iconBase64, out Uri cachedUri))
-                {
-                    return cachedUri;
-                }
-
                 // Base64データをバイト配列に変換
                 byte[] imageBytes = Convert.FromBase64String(iconBase64);
 
@@ -247,25 +271,30 @@ namespace google_chat_desktop
                 using (SHA256 sha256 = SHA256.Create())
                 {
                     byte[] hashBytes = sha256.ComputeHash(imageBytes);
-                    string hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+                    string hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+
+                    // メモリキャッシュをハッシュキーで確認
+                    if (onMemoryIconCache.TryGetValue(hashString, out Uri? cachedUri))
+                    {
+                        return cachedUri;
+                    }
 
                     // MIMEタイプからファイル拡張子を取得
                     string fileExtension = System.Text.RegularExpressions.Regex.Match(iconMimeType, @"image/(?<ext>\w+)").Groups["ext"].Value;
 
                     // アイコンキャッシュフォルダ内の一時ファイルのパスを生成
-                    string iconCachePath = System.IO.Path.Combine(tempFolderPath, iconCacheFolderName);
-                    string tempFilePath = System.IO.Path.Combine(iconCachePath, $"{hashString}.{fileExtension}");
+                    string iconCachePath = Path.Combine(tempFolderPath, iconCacheFolderName);
+                    string tempFilePath = Path.Combine(iconCachePath, $"{hashString}.{fileExtension}");
 
-                    // ファイルが既に存在するか確認
-                    if (!System.IO.File.Exists(tempFilePath))
-                    {
-                        // バイト配列をファイルに書き込む
-                        System.IO.File.WriteAllBytes(tempFilePath, imageBytes);
-                    }
+                    // FileOptions.DeleteOnClose を使用してファイルを作成し、プロセス終了時に自動削除されるようにする
+                    var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+                    fs.Write(imageBytes, 0, imageBytes.Length);
+                    fs.Flush();
+                    _iconStreams.Add(fs);
 
                     // ファイルのUriをキャッシュに追加
-                    Uri fileUri = new Uri(tempFilePath);
-                    onMemoryIconCache[iconBase64] = fileUri;
+                    Uri fileUri = new(tempFilePath);
+                    onMemoryIconCache[hashString] = fileUri;
 
                     return fileUri;
                 }
@@ -286,7 +315,13 @@ namespace google_chat_desktop
             {
                 string tag = args["tag"];
                 string script = $"window.dispatchEvent(new CustomEvent('notificationClick', {{ detail: {{ tag: '{tag}' }} }}));";
-                Dispatcher.Invoke(async () => await webView.CoreWebView2.ExecuteScriptAsync(script));
+                Dispatcher.Invoke(async () =>
+                {
+                    if (webView.CoreWebView2 != null)
+                    {
+                        await webView.CoreWebView2.ExecuteScriptAsync(script);
+                    }
+                });
             }
 
             // ウィンドウが非表示の場合は表示し、アクティブにする
@@ -296,25 +331,25 @@ namespace google_chat_desktop
         private class FaviconData
         {
             [JsonPropertyName("type")]
-            public string Type { get; set; }
+            public string? Type { get; set; }
 
             [JsonPropertyName("state")]
-            public string State { get; set; }
+            public string? State { get; set; }
         }
 
         private class NotificationData
     {
         [JsonPropertyName("title")]
-        public string Title { get; set; }
+        public string? Title { get; set; }
 
         [JsonPropertyName("options")]
-        public NotificationOptions Options { get; set; }
+        public NotificationOptions? Options { get; set; }
     }
 
         public class NotificationOptions
         {
             [JsonPropertyName("body")]
-            public string Body { get; set; }
+            public string? Body { get; set; }
 
             [JsonPropertyName("silent")]
             public bool? Silent { get; set; }
@@ -329,7 +364,7 @@ namespace google_chat_desktop
             public string? IconMimeType { get; set; }
         }
 
-        private void CoreWebView2_NewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
+        private void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
             if (externalLinks == null)
             {
@@ -340,16 +375,6 @@ namespace google_chat_desktop
 
         public void InitializeNotifyIcon()
         {
-            contextMenu = new ContextMenu();
-
-            MenuItem toggleMenuItem = new MenuItem { Header = "Toggle" };
-            toggleMenuItem.Click += ToggleWindow;
-            contextMenu.Items.Add(toggleMenuItem);
-
-            MenuItem quitMenuItem = new MenuItem { Header = "Quit" };
-            quitMenuItem.Click += ExitApplication;
-            contextMenu.Items.Add(quitMenuItem);
-
             notifyIcon = new NotifyIcon
             {
                 Icon = new Icon("resources/icons/offline/windows.ico"),
@@ -357,8 +382,11 @@ namespace google_chat_desktop
                 ContextMenuStrip = new ContextMenuStrip()
             };
 
-            notifyIcon.ContextMenuStrip.Items.Add("Toggle", null, (s, e) => ToggleWindow(s, e));
-            notifyIcon.ContextMenuStrip.Items.Add("Quit", null, (s, e) => ExitApplication(s, e));
+            var toggleText = (string)Application.Current.Resources["Tray_Toggle"] ?? "Toggle";
+            var quitText = (string)Application.Current.Resources["Tray_Quit"] ?? "Quit";
+
+            notifyIcon.ContextMenuStrip.Items.Add(toggleText, null, (s, e) => ToggleWindow(s, e));
+            notifyIcon.ContextMenuStrip.Items.Add(quitText, null, (s, e) => ExitApplication(s, e));
             notifyIcon.DoubleClick += (s, e) => ShowAndActivateWindow();
         }
 
@@ -392,9 +420,9 @@ namespace google_chat_desktop
         {
             try
             {
-                if (System.IO.Directory.Exists(tempFolderPath))
+                if (Directory.Exists(tempFolderPath))
                 {
-                    System.IO.Directory.Delete(tempFolderPath, true);
+                    Directory.Delete(tempFolderPath, true);
                 }
             }
             catch (Exception ex)
@@ -403,7 +431,7 @@ namespace google_chat_desktop
             }
         }
 
-        private void ToggleWindow(object sender, EventArgs e)
+        private void ToggleWindow(object? sender, EventArgs e)
         {
             if (this.Visibility == Visibility.Visible)
             {
@@ -419,9 +447,16 @@ namespace google_chat_desktop
             }
         }
 
-        public void ExitApplication(object sender, EventArgs e)
+        public void ExitApplication(object? sender, EventArgs e)
         {
             DisposeNotifyIcon();
+
+            foreach (var stream in _iconStreams)
+            {
+                stream.Dispose();
+            }
+            _iconStreams.Clear();
+
             DeleteTempFolder();
             Application.Current.Shutdown();
         }
@@ -459,7 +494,7 @@ namespace google_chat_desktop
 
         private void About_Click(object sender, RoutedEventArgs e)
         {
-            aboutPanel.ShowAbout();
+            AboutPanel.ShowAbout();
         }
 
 
@@ -467,13 +502,13 @@ namespace google_chat_desktop
         {
             if (this.WindowState == WindowState.Normal)
             {
-                windowSettings.SaveWindowSettings(this);
+                WindowSettings.SaveWindowSettings(this);
             }
         }
 
-        private void MainWindow_LocationChanged(object sender, EventArgs e)
+        private void MainWindow_LocationChanged(object? sender, EventArgs e)
         {
-            windowSettings.SaveWindowSettings(this);
+            WindowSettings.SaveWindowSettings(this);
         }
     }
 }

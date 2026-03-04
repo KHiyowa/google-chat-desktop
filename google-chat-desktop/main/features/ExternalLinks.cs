@@ -8,7 +8,7 @@ namespace google_chat_desktop.main.features
     {
         private readonly string[] allowedDomains = { "accounts.google.com", "accounts.youtube.com", "chat.google.com", "mail.google.com" };
 
-        public void HandleNewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
+        public void HandleNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
             Uri? uri = null;
             bool shouldOpenExternally = true;
@@ -63,7 +63,7 @@ namespace google_chat_desktop.main.features
                     // start : Open with default associated application
                     // "" : Dummy title for the cmd window
                     // "{url}" : Handle URLs with spaces
-                    ProcessStartInfo psi = new ProcessStartInfo
+                    ProcessStartInfo psi = new()
                     {
                         FileName = "cmd",
                         Arguments = $"/c start \"\" \"{url}\"",
@@ -81,7 +81,8 @@ namespace google_chat_desktop.main.features
                                       $"[Error]\n" +
                                       $"Normal run {ex1.Message}\n" +
                                       $"Via cmd {ex2.Message}\n\n" +
-                                      $"Please report developer with screen shot of this window!";
+                                      $"Please report developer with screen shot of this window!\n" +
+                                      $"この画面のスクリーンショットを撮り、開発者にお知らせください。";
 
                     System.Windows.MessageBox.Show(errorMsg, "External link error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
