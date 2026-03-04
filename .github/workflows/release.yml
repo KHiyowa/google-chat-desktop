@@ -36,7 +36,7 @@ jobs:
         run: dotnet build ${{ env.PROJECT_FILE_PATH }} --configuration Release --no-restore -r win-${{ matrix.architecture }}
 
       - name: Publish
-        run: dotnet publish ${{ env.PROJECT_FILE_PATH }} --configuration Release --runtime win-${{ matrix.architecture }} --output ./publish_temp/google-chat-desktop --no-build --self-contained true
+        run: dotnet publish ${{ env.PROJECT_FILE_PATH }} --configuration Release --runtime win-${{ matrix.architecture }} --output ./publish_temp/google-chat-desktop --self-contained true
 
       - name: Create zip archive
         run: |
