@@ -28,7 +28,6 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3800.47" />
-		<PackageReference Include="System.Drawing.Common" Version="10.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>

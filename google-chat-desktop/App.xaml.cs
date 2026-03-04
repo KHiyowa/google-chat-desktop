@@ -62,13 +62,16 @@ namespace google_chat_desktop
         public void RelaunchApplication()
         {
             // 現在の実行ファイルのパスを取得
-            var exePath = Process.GetCurrentProcess().MainModule.FileName;
+            var exePath = Environment.ProcessPath;
 
             // 新しいプロセスを起動
-            Process.Start(new ProcessStartInfo(exePath)
+            if (exePath != null)
             {
-                UseShellExecute = true
-            });
+                Process.Start(new ProcessStartInfo(exePath)
+                {
+                    UseShellExecute = true
+                });
+            }
 
             // 現在のプロセスを終了
             Application.Current.Shutdown();

@@ -5,9 +5,7 @@ namespace google_chat_desktop.main.features
 {
     public class AboutPanel
     {
-        private static bool isEventHandlerRegistered = false;
-
-        public void ShowAbout()
+        public static void ShowAbout()
         {
             var assembly = Assembly.GetExecutingAssembly();
             var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "N/A";

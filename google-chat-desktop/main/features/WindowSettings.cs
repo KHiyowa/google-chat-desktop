@@ -4,7 +4,7 @@ namespace google_chat_desktop.main.features
 {
     internal class WindowSettings
     {
-        public void LoadWindowSettings(Window window)
+        public static void LoadWindowSettings(Window window)
         {
             double top = Properties.Settings.Default.WindowTop;
             double left = Properties.Settings.Default.WindowLeft;
@@ -36,7 +36,7 @@ namespace google_chat_desktop.main.features
             }
         }
 
-        public void SaveWindowSettings(Window window)
+        public static void SaveWindowSettings(Window window)
         {
             var screen = Screen.FromRectangle(new Rectangle(
                 (int)window.Left,
@@ -57,7 +57,7 @@ namespace google_chat_desktop.main.features
             }
         }
 
-        private Screen GetScreenByDeviceName(string deviceName)
+        private static Screen? GetScreenByDeviceName(string deviceName)
         {
             foreach (var screen in Screen.AllScreens)
             {
