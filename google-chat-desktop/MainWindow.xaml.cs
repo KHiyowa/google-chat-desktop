@@ -369,8 +369,11 @@ namespace google_chat_desktop
                 ContextMenuStrip = new ContextMenuStrip()
             };
 
-            notifyIcon.ContextMenuStrip.Items.Add("Toggle", null, (s, e) => ToggleWindow(s, e));
-            notifyIcon.ContextMenuStrip.Items.Add("Quit", null, (s, e) => ExitApplication(s, e));
+            var toggleText = (string)Application.Current.Resources["Tray_Toggle"] ?? "Toggle";
+            var quitText = (string)Application.Current.Resources["Tray_Quit"] ?? "Quit";
+
+            notifyIcon.ContextMenuStrip.Items.Add(toggleText, null, (s, e) => ToggleWindow(s, e));
+            notifyIcon.ContextMenuStrip.Items.Add(quitText, null, (s, e) => ExitApplication(s, e));
             notifyIcon.DoubleClick += (s, e) => ShowAndActivateWindow();
         }
 

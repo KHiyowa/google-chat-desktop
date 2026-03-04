@@ -81,7 +81,8 @@ namespace google_chat_desktop.main.features
                                       $"[Error]\n" +
                                       $"Normal run {ex1.Message}\n" +
                                       $"Via cmd {ex2.Message}\n\n" +
-                                      $"Please report developer with screen shot of this window!";
+                                      $"Please report developer with screen shot of this window!\n" +
+                                      $"この画面のスクリーンショットを撮り、開発者にお知らせください。";
 
                     System.Windows.MessageBox.Show(errorMsg, "External link error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }

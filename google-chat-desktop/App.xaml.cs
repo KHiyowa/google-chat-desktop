@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -21,6 +21,8 @@ namespace google_chat_desktop
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            SetLanguageDictionary();
+
             var assembly = Assembly.GetExecutingAssembly();
             var appGuid = assembly.GetCustomAttribute<GuidAttribute>()?.Value;
 
@@ -50,6 +52,23 @@ namespace google_chat_desktop
 
             // MainWindowの初期化と表示
             CreateMainWindow();
+        }
+
+        private void SetLanguageDictionary()
+        {
+            ResourceDictionary dict = new ResourceDictionary();
+            string culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+            if (culture == "ja")
+            {
+                dict.Source = new Uri("resources/l10n/ja_jp.xaml", UriKind.Relative);
+            }
+            else
+            {
+                dict.Source = new Uri("resources/l10n/en_us.xaml", UriKind.Relative);
+            }
+
+            this.Resources.MergedDictionaries.Add(dict);
         }
 
         private void CreateMainWindow()
