@@ -7,6 +7,15 @@ An unofficial desktop app for [Google Chat](http://chat.google.com) built with C
 This app is maintained for our personal use.  
 You may use this app as you wish, but we do not promise ongoing maintenance.
 
+### What's new in v3.1.0
+
+* Updated .NET runtime from 8 to 10
+* Stricter handling of icon cache
+* Updated libraries
+* Addressed performance issues in Netskope environments
+* Japanese menu support if system locale is Japanese (メニューの日本語表示に対応)
+  - Note: We will not accept PRs for other languages as we cannot verify the translation.
+
 ### Motivation
 
 * Google has [shutdown](https://support.google.com/chat/answer/10194711) the official Google Chat Desktop App in March
@@ -24,7 +33,7 @@ You may use this app as you wish, but we do not promise ongoing maintenance.
 
 ### Supported Platforms
 
-The app should work on windows x64 platforms, but due to lack of time; we test on most popular only.  
+The app should work on windows x64 and arm64 platforms, but due to lack of time; we test on most popular only.  
 
 | OS/Platform         |    Version    |
 |:--------------------|:-------------:|
@@ -44,11 +53,15 @@ The app should work on windows x64 platforms, but due to lack of time; we test o
     - Limitation: If the window is maximized, it will not be remembered correctly.
 * Prevent multiple chat app instances from running
 
-Not yet implemented in v3.0.3
+Not yet implemented in v3.1.0
 * Unread message counter in dock
-* Auto start the app when you log in to your machine (configurable)
 * Auto check for internet on startup and keep retrying to connect every 60 seconds if offline
 * CTRL+F shortcut to search
+
+### Auto Start
+
+We currently have no plans to implement an auto-start feature within the app.
+If you want the app to start automatically when you log in, please create a shortcut to the application and place it in your Windows Startup folder (`shell:startup`).
 
 ### Acknowledgements
 This app is based on following:
@@ -64,4 +77,4 @@ This desktop client has no way to access none of your data.
 
 ## License
 
-[GNU GPLv3](LICENSE.txt) License
+[GNU GPLv3](LICENSE) License
