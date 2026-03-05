@@ -18,6 +18,9 @@
             <MenuItem Header="{DynamicResource Menu_View}">
                 <MenuItem Header="{DynamicResource Menu_Reload}" Click="Reload_Click"/>
             </MenuItem>
+            <MenuItem Header="{DynamicResource Menu_Option}">
+                <MenuItem Name="MenuTreatDmAsSpecial" Header="{DynamicResource Menu_TreatDmAsSpecial}" IsCheckable="True" Click="TreatDmAsSpecial_Click"/>
+            </MenuItem>
             <MenuItem Header="{DynamicResource Menu_Help}">
                 <MenuItem Header="{DynamicResource Menu_OfficialGitHub}" Click="OfficialGitHub_Click"/>
                 <MenuItem Header="{DynamicResource Menu_About}" Click="About_Click"/>

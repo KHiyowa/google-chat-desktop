@@ -11,4 +11,6 @@
     <sys:String x:Key="Menu_About">バージョン情報</sys:String>
     <sys:String x:Key="Tray_Toggle">表示切り替え</sys:String>
     <sys:String x:Key="Tray_Quit">終了</sys:String>
+    <sys:String x:Key="Menu_Option">オプション</sys:String>
+    <sys:String x:Key="Menu_TreatDmAsSpecial">DM見逃し防止機能(ベータ)</sys:String>
 </ResourceDictionary>

@@ -4,6 +4,7 @@ using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
@@ -25,6 +26,7 @@ namespace google_chat_desktop
         private ExternalLinks? externalLinks;
         private readonly WindowSettings windowSettings;
         private readonly AboutPanel aboutPanel;
+        private readonly System.Windows.Media.MediaPlayer mediaPlayer = new();
 
         private const string iconCacheFolderName = "iconCache";
         private const string ChatUrl = "https://chat.google.com/";
@@ -66,6 +68,9 @@ namespace google_chat_desktop
             {
                 Directory.CreateDirectory(iconCachePath);
             }
+
+            // 設定値をメニューのチェック状態に反映
+            MenuTreatDmAsSpecial.IsChecked = Properties.Settings.Default.TreatDmAsSpecial;
         }
 
         private async void InitializeWebView()
@@ -230,13 +235,75 @@ namespace google_chat_desktop
             }
         }
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FLASHWINFO
+        {
+            public uint cbSize;
+            public IntPtr hwnd;
+            public uint dwFlags;
+            public uint uCount;
+            public uint dwTimeout;
+        }
+
+        private const uint FLASHW_ALL = 3;
+        private const uint FLASHW_TIMERNOFG = 12;
+
+        private void FlashWindow()
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(this);
+            var info = new FLASHWINFO
+            {
+                cbSize = Convert.ToUInt32(Marshal.SizeOf(typeof(FLASHWINFO))),
+                hwnd = helper.Handle,
+                dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG,
+                uCount = uint.MaxValue,
+                dwTimeout = 0
+            };
+            FlashWindowEx(ref info);
+        }
 
         private void ShowNotification(string title, string message, string? tag = null, Uri? iconUri = null)
         {
+            // Beta: DM判定（タイトル末尾に "(ルーム名)" が無い場合はDMの可能性が高いとみなしてウィンドウを点滅させる）
+            // 正規表現: スペース + ( + 任意の文字 + ) + 行末
+            bool isDm = false;
+            if (Properties.Settings.Default.TreatDmAsSpecial)
+            {
+                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, @"\s\(.+\)$");
+            }
+
+            if (isDm)
+            {
+                FlashWindow();
+            }
+
             var toastBuilder = new ToastContentBuilder()
                 .AddText(title)
                 .AddText(message)
-                .AddAudio(new ToastAudio { Silent = true }); // Disable notification sound
+                .AddAudio(new ToastAudio { Silent = true });
+
+            if (isDm)
+            {
+                string soundFolder = Path.Combine(appDirectory, "resources", "audio");
+                string mp3Path = Path.Combine(soundFolder, "dm.mp3");
+                string wavPath = Path.Combine(soundFolder, "dm.wav");
+                string? soundPath = File.Exists(mp3Path) ? mp3Path : (File.Exists(wavPath) ? wavPath : null);
+
+                if (soundPath != null)
+                {
+                    PlayNotificationSound(soundPath);
+                }
+            }
+
+            if (isDm)
+            {
+                toastBuilder.SetToastScenario(ToastScenario.Reminder);
+                toastBuilder.AddButton(new ToastButton("OK", "action=ok"));
+            }
 
             if (!string.IsNullOrEmpty(tag))
             {
@@ -253,6 +320,19 @@ namespace google_chat_desktop
 
             // Show the notification
             ToastNotificationManagerCompat.CreateToastNotifier().Show(toastNotification);
+        }
+
+        private void PlayNotificationSound(string filePath)
+        {
+            try
+            {
+                mediaPlayer.Open(new Uri(filePath));
+                mediaPlayer.Play();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to play sound: {ex.Message}");
+            }
         }
 
         private Uri? CreateImageUri(string? iconBase64, string? iconMimeType)
@@ -310,6 +390,12 @@ namespace google_chat_desktop
         {
             // Parse the arguments
             var args = ToastArguments.Parse(e.Argument);
+
+            // OKボタン（既読）の場合はウィンドウをアクティブにせずに終了
+            if (args.Contains("action") && args["action"] == "ok")
+            {
+                return;
+            }
 
             if (args.Contains("tag"))
             {
@@ -481,6 +567,12 @@ namespace google_chat_desktop
         private void Reload_Click(object sender, RoutedEventArgs e)
         {
             webView.Reload();
+        }
+
+        private void TreatDmAsSpecial_Click(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.TreatDmAsSpecial = MenuTreatDmAsSpecial.IsChecked;
+            Properties.Settings.Default.Save();
         }
 
         private void OfficialGitHub_Click(object sender, RoutedEventArgs e)

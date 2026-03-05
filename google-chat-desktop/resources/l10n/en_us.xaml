@@ -11,4 +11,6 @@
     <sys:String x:Key="Menu_About">About</sys:String>
     <sys:String x:Key="Tray_Toggle">Toggle</sys:String>
     <sys:String x:Key="Tray_Quit">Quit</sys:String>
+    <sys:String x:Key="Menu_Option">Option</sys:String>
+    <sys:String x:Key="Menu_TreatDmAsSpecial">Prevent missing DMs (beta)</sys:String>
 </ResourceDictionary>
