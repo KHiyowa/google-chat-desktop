@@ -273,7 +273,7 @@ namespace google_chat_desktop
             bool isDm = false;
             if (Properties.Settings.Default.TreatDmAsSpecial)
             {
-                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, @"\s\(.+\)$");
+                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, @"\s[\u200E\u200F]*\(.+\)[\u200E\u200F]*$");
             }
 
             if (isDm)
