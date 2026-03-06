@@ -3,6 +3,7 @@ using google_chat_desktop.main.features;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,6 +15,20 @@ namespace google_chat_desktop
 {
     public partial class MainWindow : Window
     {
+        // P/Invoke for keyboard layout switching (workaround for WebView2 not forwarding Alt+Shift to OS)
+        [DllImport("user32.dll")]
+        private static extern IntPtr ActivateKeyboardLayout(IntPtr hkl, uint flags);
+
+        [DllImport("user32.dll")]
+        private static extern short GetKeyState(int nVirtKey);
+
+        private static readonly IntPtr HKL_NEXT = new(1);
+        private const uint KLF_SETFORPROCESS = 0x00000100;
+        private const int VK_SHIFT = 0x10;
+        private const int VK_MENU = 0x12; // Alt key
+
+        private bool _altShiftLangSwitchPending = false;
+
         private static MainWindow? instance;
         private static readonly Lock lockObject = new();
         private static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -100,6 +115,7 @@ namespace google_chat_desktop
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
             webView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;
+            webView.AcceleratorKeyPressed += WebView_AcceleratorKeyPressed;
 
             // WebView2 Configuration
             var settings = webView.CoreWebView2.Settings;
@@ -138,6 +154,40 @@ namespace google_chat_desktop
             }
         }
 
+
+        private void WebView_AcceleratorKeyPressed(object? sender, CoreWebView2AcceleratorKeyPressedEventArgs e)
+        {
+            uint vk = e.VirtualKey;
+            var kind = e.KeyEventKind;
+
+            bool isKeyDown = kind == CoreWebView2KeyEventKind.KeyDown ||
+                             kind == CoreWebView2KeyEventKind.SystemKeyDown;
+            bool isKeyUp = kind == CoreWebView2KeyEventKind.KeyUp ||
+                           kind == CoreWebView2KeyEventKind.SystemKeyUp;
+
+            if (vk == VK_MENU || vk == VK_SHIFT)
+            {
+                if (isKeyDown)
+                {
+                    bool altDown = (GetKeyState(VK_MENU) & 0x8000) != 0;
+                    bool shiftDown = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+
+                    if ((vk == VK_SHIFT && altDown) || (vk == VK_MENU && shiftDown))
+                        _altShiftLangSwitchPending = true;
+                }
+                else if (isKeyUp && _altShiftLangSwitchPending)
+                {
+                    _altShiftLangSwitchPending = false;
+                    ActivateKeyboardLayout(HKL_NEXT, KLF_SETFORPROCESS);
+                    e.Handled = true;
+                }
+            }
+            else
+            {
+                // Another key pressed while Alt+Shift held = shortcut, not language switch
+                _altShiftLangSwitchPending = false;
+            }
+        }
 
         private void CoreWebView2_PermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
         {
