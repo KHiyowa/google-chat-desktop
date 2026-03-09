@@ -13,4 +13,11 @@
     <sys:String x:Key="Tray_Quit">終了</sys:String>
     <sys:String x:Key="Menu_Option">オプション</sys:String>
     <sys:String x:Key="Menu_TreatDmAsSpecial">DM見逃し防止機能(ベータ)</sys:String>
+    <sys:String x:Key="Menu_Settings">設定</sys:String>
+    <sys:String x:Key="Settings_Title">設定</sys:String>
+    <sys:String x:Key="Settings_BracketsDescription">DM判定に使用するルーム名の囲みカッコを指定します。複数指定する場合は「開き」と「閉じ」の順番を対応させてください。</sys:String>
+    <sys:String x:Key="Settings_OpeningBrackets">開きカッコ:</sys:String>
+    <sys:String x:Key="Settings_ClosingBrackets">閉じカッコ:</sys:String>
+    <sys:String x:Key="Settings_Save">保存</sys:String>
+    <sys:String x:Key="Settings_Cancel">キャンセル</sys:String>
 </ResourceDictionary>

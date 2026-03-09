@@ -13,4 +13,11 @@
     <sys:String x:Key="Tray_Quit">Quit</sys:String>
     <sys:String x:Key="Menu_Option">Option</sys:String>
     <sys:String x:Key="Menu_TreatDmAsSpecial">Prevent missing DMs (beta)</sys:String>
+    <sys:String x:Key="Menu_Settings">Settings</sys:String>
+    <sys:String x:Key="Settings_Title">Settings</sys:String>
+    <sys:String x:Key="Settings_BracketsDescription">Specify the brackets used for room names to identify DMs. If multiple are specified, ensure the order of opening and closing brackets matches.</sys:String>
+    <sys:String x:Key="Settings_OpeningBrackets">Opening Brackets:</sys:String>
+    <sys:String x:Key="Settings_ClosingBrackets">Closing Brackets:</sys:String>
+    <sys:String x:Key="Settings_Save">Save</sys:String>
+    <sys:String x:Key="Settings_Cancel">Cancel</sys:String>
 </ResourceDictionary>

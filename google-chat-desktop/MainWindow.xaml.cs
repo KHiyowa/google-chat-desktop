@@ -3,6 +3,7 @@ using google_chat_desktop.main.features;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
 using System.IO;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -269,11 +270,25 @@ namespace google_chat_desktop
         private void ShowNotification(string title, string message, string? tag = null, Uri? iconUri = null)
         {
             // Beta: DM判定（タイトル末尾に "(ルーム名)" が無い場合はDMの可能性が高いとみなしてウィンドウを点滅させる）
-            // 正規表現: スペース + ( + 任意の文字 + ) + 行末
             bool isDm = false;
             if (Properties.Settings.Default.TreatDmAsSpecial)
             {
-                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, @"\s[\u200E\u200F]*\(.+\)[\u200E\u200F]*$");
+                string open = Properties.Settings.Default.OpeningBrackets ?? "(";
+                string close = Properties.Settings.Default.ClosingBrackets ?? ")";
+
+                var patterns = new List<string>();
+                int length = Math.Min(open.Length, close.Length);
+
+                for (int i = 0; i < length; i++)
+                {
+                    string o = System.Text.RegularExpressions.Regex.Escape(open[i].ToString());
+                    string c = System.Text.RegularExpressions.Regex.Escape(close[i].ToString());
+                    patterns.Add($"{o}.+{c}");
+                }
+
+                // 指定されたカッコのペアのいずれかにマッチするか確認
+                string combinedPattern = patterns.Count > 0 ? $"({string.Join("|", patterns)})" : @"\(.+\)";
+                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, $@"\s[\u200E\u200F]*{combinedPattern}[\u200E\u200F]*$");
             }
 
             if (isDm)
@@ -587,6 +602,11 @@ namespace google_chat_desktop
         private void About_Click(object sender, RoutedEventArgs e)
         {
             AboutPanel.ShowAbout();
+        }
+
+        private void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsWindow.ShowSettings();
         }
 
 

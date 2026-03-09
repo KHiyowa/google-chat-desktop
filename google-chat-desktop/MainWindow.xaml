@@ -20,6 +20,8 @@
             </MenuItem>
             <MenuItem Header="{DynamicResource Menu_Option}">
                 <MenuItem Name="MenuTreatDmAsSpecial" Header="{DynamicResource Menu_TreatDmAsSpecial}" IsCheckable="True" Click="TreatDmAsSpecial_Click"/>
+                <Separator />
+                <MenuItem Header="{DynamicResource Menu_Settings}" Click="Settings_Click"/>
             </MenuItem>
             <MenuItem Header="{DynamicResource Menu_Help}">
                 <MenuItem Header="{DynamicResource Menu_OfficialGitHub}" Click="OfficialGitHub_Click"/>
