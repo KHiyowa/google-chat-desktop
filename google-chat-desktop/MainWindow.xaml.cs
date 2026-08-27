@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.WinUI.Notifications;
+using CommunityToolkit.WinUI.Notifications;
 using google_chat_desktop.main.features;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
@@ -19,7 +19,6 @@ namespace google_chat_desktop
         private static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
         private static readonly string tempFolderPath = Path.Combine(appDirectory, "temp");
         private static readonly Dictionary<string, Uri> onMemoryIconCache = []; // Key: SHA256 Hash
-        private static readonly List<FileStream> _iconStreams = [];
 
         private NotifyIcon? notifyIcon;
         private ExternalLinks? externalLinks;
@@ -101,6 +100,21 @@ namespace google_chat_desktop
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
             webView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;
 
+            // ページ初期化時に最速で load.js を注入（通知インターセプト用）
+            try
+            {
+                string scriptPath = Path.Combine(appDirectory, "main/load/load.js");
+                if (File.Exists(scriptPath))
+                {
+                    string script = await File.ReadAllTextAsync(scriptPath);
+                    await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to add preload script: {ex.Message}");
+            }
+
             // WebView2 Configuration
             var settings = webView.CoreWebView2.Settings;
             settings.AreDefaultContextMenusEnabled = true;
@@ -122,10 +136,13 @@ namespace google_chat_desktop
         {
             if (e.IsSuccess && webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
-                // Load and execute the preload.js script
+                // Load and execute the preload.js script as fallback
                 string scriptPath = "main/load/load.js";
-                string script = await File.ReadAllTextAsync(scriptPath);
-                await webView.CoreWebView2.ExecuteScriptAsync(script);
+                if (File.Exists(scriptPath))
+                {
+                    string script = await File.ReadAllTextAsync(scriptPath);
+                    await webView.CoreWebView2.ExecuteScriptAsync(script);
+                }
             }
             else if (e.IsSuccess && !webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
@@ -280,20 +297,27 @@ namespace google_chat_desktop
                     }
 
                     // MIMEタイプからファイル拡張子を取得
-                    string fileExtension = System.Text.RegularExpressions.Regex.Match(iconMimeType, @"image/(?<ext>\w+)").Groups["ext"].Value;
+                    string fileExtension = "png";
+                    var match = System.Text.RegularExpressions.Regex.Match(iconMimeType, @"image/(?<ext>\w+)");
+                    if (match.Success)
+                    {
+                        fileExtension = match.Groups["ext"].Value;
+                    }
 
                     // アイコンキャッシュフォルダ内の一時ファイルのパスを生成
                     string iconCachePath = Path.Combine(tempFolderPath, iconCacheFolderName);
+                    if (!Directory.Exists(iconCachePath))
+                    {
+                        Directory.CreateDirectory(iconCachePath);
+                    }
+
                     string tempFilePath = Path.Combine(iconCachePath, $"{hashString}.{fileExtension}");
 
-                    // FileOptions.DeleteOnClose を使用してファイルを作成し、プロセス終了時に自動削除されるようにする
-                    var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
-                    fs.Write(imageBytes, 0, imageBytes.Length);
-                    fs.Flush();
-                    _iconStreams.Add(fs);
+                    // ファイルを書き込み、共有ロックを解放（Windows通知サービスが即座に読み取れるようにする）
+                    File.WriteAllBytes(tempFilePath, imageBytes);
 
                     // ファイルのUriをキャッシュに追加
-                    Uri fileUri = new(tempFilePath);
+                    Uri fileUri = new(Path.GetFullPath(tempFilePath));
                     onMemoryIconCache[hashString] = fileUri;
 
                     return fileUri;
@@ -314,7 +338,8 @@ namespace google_chat_desktop
             if (args.Contains("tag"))
             {
                 string tag = args["tag"];
-                string script = $"window.dispatchEvent(new CustomEvent('notificationClick', {{ detail: {{ tag: '{tag}' }} }}));";
+                string escapedTag = JsonSerializer.Serialize(tag);
+                string script = $"window.dispatchEvent(new CustomEvent('notificationClick', {{ detail: {{ tag: {escapedTag} }} }}));";
                 Dispatcher.Invoke(async () =>
                 {
                     if (webView.CoreWebView2 != null)
@@ -338,13 +363,13 @@ namespace google_chat_desktop
         }
 
         private class NotificationData
-    {
-        [JsonPropertyName("title")]
-        public string? Title { get; set; }
+        {
+            [JsonPropertyName("title")]
+            public string? Title { get; set; }
 
-        [JsonPropertyName("options")]
-        public NotificationOptions? Options { get; set; }
-    }
+            [JsonPropertyName("options")]
+            public NotificationOptions? Options { get; set; }
+        }
 
         public class NotificationOptions
         {
@@ -450,13 +475,6 @@ namespace google_chat_desktop
         public void ExitApplication(object? sender, EventArgs e)
         {
             DisposeNotifyIcon();
-
-            foreach (var stream in _iconStreams)
-            {
-                stream.Dispose();
-            }
-            _iconStreams.Clear();
-
             DeleteTempFolder();
             Application.Current.Shutdown();
         }
