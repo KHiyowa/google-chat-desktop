@@ -50,6 +50,14 @@ namespace google_chat_desktop
         private MainWindow()
         {
             InitializeComponent();
+
+            // バージョンアップ時に前バージョンのユーザー設定を自動引き継ぎ
+            if (Properties.Settings.Default.UpgradeRequired)
+            {
+                Properties.Settings.Default.Upgrade();
+                Properties.Settings.Default.UpgradeRequired = false;
+                Properties.Settings.Default.Save();
+            }
             windowSettings = new WindowSettings();
             WindowSettings.LoadWindowSettings(this);
             InitializeWebView();
