@@ -7,9 +7,11 @@ An unofficial desktop app for [Google Chat](http://chat.google.com) built with C
 This app is maintained for our personal use.  
 You may use this app as you wish, but we do not promise ongoing maintenance.
 
-### What's new in v3.2.0
+### What's new in v3.2.1
 
-* Prevent missing DMs (Beta) - Added option to treat direct messages with distinct notification sound, window flashing, and reminder toast
+* Added "Exclude Keywords" setting to prevent reaction notifications from triggering DM alert sound/flash
+* Expanded default bracket patterns to support square brackets, Japanese quotes, and full-width brackets for room/thread detection
+* Prevent missing DMs - Added option to treat direct messages with distinct notification sound, window flashing, and reminder toast
 * Fixed notification capture to adapt to Google Chat's updated internal notification mechanism
 * Fixed avatar icon display for Windows Toast notifications
 * Fixed notification click routing to focus and open the specific chat/room
@@ -51,7 +53,7 @@ The app should work on windows x64 and arm64 platforms, but due to lack of time;
     - Limitation: If the window is maximized, it will not be remembered correctly.
 * Prevent multiple chat app instances from running
 
-Not yet implemented in v3.2.0
+Not yet implemented in v3.2.1
 * Unread message counter in dock
 * Auto check for internet on startup and keep retrying to connect every 60 seconds if offline
 * CTRL+F shortcut to search
