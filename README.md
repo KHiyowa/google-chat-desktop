@@ -11,7 +11,7 @@ You may use this app as you wish, but we do not promise ongoing maintenance.
 
 * Added "Exclude Keywords" setting to prevent reaction notifications from triggering DM alert sound/flash
 * Expanded default bracket patterns to support square brackets, Japanese quotes, and full-width brackets for room/thread detection
-* Prevent missing DMs (Beta) - Added option to treat direct messages with distinct notification sound, window flashing, and reminder toast
+* Prevent missing DMs - Added option to treat direct messages with distinct notification sound, window flashing, and reminder toast
 * Fixed notification capture to adapt to Google Chat's updated internal notification mechanism
 * Fixed avatar icon display for Windows Toast notifications
 * Fixed notification click routing to focus and open the specific chat/room

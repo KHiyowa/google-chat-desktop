@@ -305,7 +305,7 @@ namespace google_chat_desktop
 
         private void ShowNotification(string title, string message, string? tag = null, Uri? iconUri = null)
         {
-            // Beta: DM判定（タイトル末尾に "(ルーム名)" が無い場合はDMの可能性が高いとみなしてウィンドウを点滅させる）
+            // DM判定（タイトル末尾に "(ルーム名)" が無い場合はDMの可能性が高いとみなしてウィンドウを点滅させる）
             bool isDm = false;
 
             if (Properties.Settings.Default.TreatDmAsSpecial)
