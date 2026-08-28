@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="google_chat_desktop.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
@@ -16,6 +16,15 @@
     </Setting>
     <Setting Name="ScreenDeviceName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="TreatDmAsSpecial" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="OpeningBrackets" Type="System.String" Scope="User">
+      <Value Profile="(Default)">(</Value>
+    </Setting>
+    <Setting Name="ClosingBrackets" Type="System.String" Scope="User">
+      <Value Profile="(Default)">)</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -7,14 +7,12 @@ An unofficial desktop app for [Google Chat](http://chat.google.com) built with C
 This app is maintained for our personal use.  
 You may use this app as you wish, but we do not promise ongoing maintenance.
 
-### What's new in v3.1.0
+### What's new in v3.2.0
 
-* Updated .NET runtime from 8 to 10
-* Stricter handling of icon cache
-* Updated libraries
-* Addressed performance issues in Netskope environments
-* Japanese menu support if system locale is Japanese (メニューの日本語表示に対応)
-  - Note: We will not accept PRs for other languages as we cannot verify the translation.
+* Prevent missing DMs (Beta) - Added option to treat direct messages with distinct notification sound, window flashing, and reminder toast
+* Fixed notification capture to adapt to Google Chat's updated internal notification mechanism
+* Fixed avatar icon display for Windows Toast notifications
+* Fixed notification click routing to focus and open the specific chat/room
 
 ### Motivation
 
@@ -53,7 +51,7 @@ The app should work on windows x64 and arm64 platforms, but due to lack of time;
     - Limitation: If the window is maximized, it will not be remembered correctly.
 * Prevent multiple chat app instances from running
 
-Not yet implemented in v3.1.0
+Not yet implemented in v3.2.0
 * Unread message counter in dock
 * Auto check for internet on startup and keep retrying to connect every 60 seconds if offline
 * CTRL+F shortcut to search

@@ -1,9 +1,9 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
-    <sys:String x:Key="Menu_File">ファイル(_F)</sys:String>
+    <sys:String x:Key="Menu_File">ファイル</sys:String>
     <sys:String x:Key="Menu_Relaunch">再起動</sys:String>
-    <sys:String x:Key="Menu_Quit">終了(_Q)</sys:String>
+    <sys:String x:Key="Menu_Quit">終了</sys:String>
     <sys:String x:Key="Menu_View">表示</sys:String>
     <sys:String x:Key="Menu_Reload">再読み込み</sys:String>
     <sys:String x:Key="Menu_Help">ヘルプ</sys:String>
@@ -11,4 +11,13 @@
     <sys:String x:Key="Menu_About">バージョン情報</sys:String>
     <sys:String x:Key="Tray_Toggle">表示切り替え</sys:String>
     <sys:String x:Key="Tray_Quit">終了</sys:String>
+    <sys:String x:Key="Menu_Option">オプション</sys:String>
+    <sys:String x:Key="Menu_TreatDmAsSpecial">DM見逃し防止機能(ベータ)</sys:String>
+    <sys:String x:Key="Menu_Settings">設定</sys:String>
+    <sys:String x:Key="Settings_Title">設定</sys:String>
+    <sys:String x:Key="Settings_BracketsDescription">DM判定に使用するルーム名の囲みカッコを指定します。複数指定する場合は「開き」と「閉じ」の順番を対応させてください。</sys:String>
+    <sys:String x:Key="Settings_OpeningBrackets">開きカッコ:</sys:String>
+    <sys:String x:Key="Settings_ClosingBrackets">閉じカッコ:</sys:String>
+    <sys:String x:Key="Settings_Save">保存</sys:String>
+    <sys:String x:Key="Settings_Cancel">キャンセル</sys:String>
 </ResourceDictionary>

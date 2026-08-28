@@ -1,8 +1,9 @@
-﻿using CommunityToolkit.WinUI.Notifications;
+using CommunityToolkit.WinUI.Notifications;
 using google_chat_desktop.main.features;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,12 +20,12 @@ namespace google_chat_desktop
         private static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
         private static readonly string tempFolderPath = Path.Combine(appDirectory, "temp");
         private static readonly Dictionary<string, Uri> onMemoryIconCache = []; // Key: SHA256 Hash
-        private static readonly List<FileStream> _iconStreams = [];
 
         private NotifyIcon? notifyIcon;
         private ExternalLinks? externalLinks;
         private readonly WindowSettings windowSettings;
         private readonly AboutPanel aboutPanel;
+        private readonly System.Windows.Media.MediaPlayer mediaPlayer = new();
 
         private const string iconCacheFolderName = "iconCache";
         private const string ChatUrl = "https://chat.google.com/";
@@ -66,6 +67,9 @@ namespace google_chat_desktop
             {
                 Directory.CreateDirectory(iconCachePath);
             }
+
+            // 設定値をメニューのチェック状態に反映
+            MenuTreatDmAsSpecial.IsChecked = Properties.Settings.Default.TreatDmAsSpecial;
         }
 
         private async void InitializeWebView()
@@ -101,6 +105,21 @@ namespace google_chat_desktop
             webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
             webView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;
 
+            // ページ初期化時に最速で load.js を注入（通知インターセプト用）
+            try
+            {
+                string scriptPath = Path.Combine(appDirectory, "main/load/load.js");
+                if (File.Exists(scriptPath))
+                {
+                    string script = await File.ReadAllTextAsync(scriptPath);
+                    await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to add preload script: {ex.Message}");
+            }
+
             // WebView2 Configuration
             var settings = webView.CoreWebView2.Settings;
             settings.AreDefaultContextMenusEnabled = true;
@@ -122,10 +141,13 @@ namespace google_chat_desktop
         {
             if (e.IsSuccess && webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
-                // Load and execute the preload.js script
+                // Load and execute the preload.js script as fallback
                 string scriptPath = "main/load/load.js";
-                string script = await File.ReadAllTextAsync(scriptPath);
-                await webView.CoreWebView2.ExecuteScriptAsync(script);
+                if (File.Exists(scriptPath))
+                {
+                    string script = await File.ReadAllTextAsync(scriptPath);
+                    await webView.CoreWebView2.ExecuteScriptAsync(script);
+                }
             }
             else if (e.IsSuccess && !webView.CoreWebView2.Source.StartsWith(ChatUrl))
             {
@@ -230,13 +252,88 @@ namespace google_chat_desktop
             }
         }
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FLASHWINFO
+        {
+            public uint cbSize;
+            public IntPtr hwnd;
+            public uint dwFlags;
+            public uint uCount;
+            public uint dwTimeout;
+        }
+
+        private const uint FLASHW_ALL = 3;
+        private const uint FLASHW_TIMERNOFG = 12;
+
+        private void FlashWindow()
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(this);
+            var info = new FLASHWINFO
+            {
+                cbSize = Convert.ToUInt32(Marshal.SizeOf(typeof(FLASHWINFO))),
+                hwnd = helper.Handle,
+                dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG,
+                uCount = uint.MaxValue,
+                dwTimeout = 0
+            };
+            FlashWindowEx(ref info);
+        }
 
         private void ShowNotification(string title, string message, string? tag = null, Uri? iconUri = null)
         {
+            // Beta: DM判定（タイトル末尾に "(ルーム名)" が無い場合はDMの可能性が高いとみなしてウィンドウを点滅させる）
+            bool isDm = false;
+            if (Properties.Settings.Default.TreatDmAsSpecial)
+            {
+                string open = Properties.Settings.Default.OpeningBrackets ?? "(";
+                string close = Properties.Settings.Default.ClosingBrackets ?? ")";
+
+                var patterns = new List<string>();
+                int length = Math.Min(open.Length, close.Length);
+
+                for (int i = 0; i < length; i++)
+                {
+                    string o = System.Text.RegularExpressions.Regex.Escape(open[i].ToString());
+                    string c = System.Text.RegularExpressions.Regex.Escape(close[i].ToString());
+                    patterns.Add($"{o}.+{c}");
+                }
+
+                string combinedPattern = patterns.Count > 0 ? $"({string.Join("|", patterns)})" : @"(.+)";
+                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, $@"s[‎‏]*{combinedPattern}[‎‏]*$");
+            }
+
+            if (isDm)
+            {
+                FlashWindow();
+            }
+
             var toastBuilder = new ToastContentBuilder()
                 .AddText(title)
                 .AddText(message)
                 .AddAudio(new ToastAudio { Silent = true }); // Disable notification sound
+
+            if (isDm)
+            {
+                string soundFolder = Path.Combine(appDirectory, "resources", "audio");
+                string mp3Path = Path.Combine(soundFolder, "dm.mp3");
+                string wavPath = Path.Combine(soundFolder, "dm.wav");
+                string? soundPath = File.Exists(mp3Path) ? mp3Path : (File.Exists(wavPath) ? wavPath : null);
+
+                if (soundPath != null)
+                {
+                    PlayNotificationSound(soundPath);
+                }
+            }
+
+            if (isDm)
+            {
+                toastBuilder.SetToastScenario(ToastScenario.Reminder);
+                toastBuilder.AddButton(new ToastButton("OK", "action=ok"));
+            }
 
             if (!string.IsNullOrEmpty(tag))
             {
@@ -253,6 +350,19 @@ namespace google_chat_desktop
 
             // Show the notification
             ToastNotificationManagerCompat.CreateToastNotifier().Show(toastNotification);
+        }
+
+        private void PlayNotificationSound(string filePath)
+        {
+            try
+            {
+                mediaPlayer.Open(new Uri(filePath));
+                mediaPlayer.Play();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to play sound: {ex.Message}");
+            }
         }
 
         private Uri? CreateImageUri(string? iconBase64, string? iconMimeType)
@@ -280,20 +390,27 @@ namespace google_chat_desktop
                     }
 
                     // MIMEタイプからファイル拡張子を取得
-                    string fileExtension = System.Text.RegularExpressions.Regex.Match(iconMimeType, @"image/(?<ext>\w+)").Groups["ext"].Value;
+                    string fileExtension = "png";
+                    var match = System.Text.RegularExpressions.Regex.Match(iconMimeType, @"image/(?<ext>w+)");
+                    if (match.Success)
+                    {
+                        fileExtension = match.Groups["ext"].Value;
+                    }
 
                     // アイコンキャッシュフォルダ内の一時ファイルのパスを生成
                     string iconCachePath = Path.Combine(tempFolderPath, iconCacheFolderName);
+                    if (!Directory.Exists(iconCachePath))
+                    {
+                        Directory.CreateDirectory(iconCachePath);
+                    }
+
                     string tempFilePath = Path.Combine(iconCachePath, $"{hashString}.{fileExtension}");
 
-                    // FileOptions.DeleteOnClose を使用してファイルを作成し、プロセス終了時に自動削除されるようにする
-                    var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
-                    fs.Write(imageBytes, 0, imageBytes.Length);
-                    fs.Flush();
-                    _iconStreams.Add(fs);
+                    // ファイルを書き込み、共有ロックを解放（Windows通知サービスが即座に読み取れるようにする）
+                    File.WriteAllBytes(tempFilePath, imageBytes);
 
                     // ファイルのUriをキャッシュに追加
-                    Uri fileUri = new(tempFilePath);
+                    Uri fileUri = new(Path.GetFullPath(tempFilePath));
                     onMemoryIconCache[hashString] = fileUri;
 
                     return fileUri;
@@ -311,10 +428,17 @@ namespace google_chat_desktop
             // Parse the arguments
             var args = ToastArguments.Parse(e.Argument);
 
+            // OKボタン（既読）の場合はウィンドウをアクティブにせずに終了
+            if (args.Contains("action") && args["action"] == "ok")
+            {
+                return;
+            }
+
             if (args.Contains("tag"))
             {
                 string tag = args["tag"];
-                string script = $"window.dispatchEvent(new CustomEvent('notificationClick', {{ detail: {{ tag: '{tag}' }} }}));";
+                string escapedTag = JsonSerializer.Serialize(tag);
+                string script = $"window.dispatchEvent(new CustomEvent('notificationClick', {{ detail: {{ tag: {escapedTag} }} }}));";
                 Dispatcher.Invoke(async () =>
                 {
                     if (webView.CoreWebView2 != null)
@@ -338,13 +462,13 @@ namespace google_chat_desktop
         }
 
         private class NotificationData
-    {
-        [JsonPropertyName("title")]
-        public string? Title { get; set; }
+        {
+            [JsonPropertyName("title")]
+            public string? Title { get; set; }
 
-        [JsonPropertyName("options")]
-        public NotificationOptions? Options { get; set; }
-    }
+            [JsonPropertyName("options")]
+            public NotificationOptions? Options { get; set; }
+        }
 
         public class NotificationOptions
         {
@@ -450,13 +574,6 @@ namespace google_chat_desktop
         public void ExitApplication(object? sender, EventArgs e)
         {
             DisposeNotifyIcon();
-
-            foreach (var stream in _iconStreams)
-            {
-                stream.Dispose();
-            }
-            _iconStreams.Clear();
-
             DeleteTempFolder();
             Application.Current.Shutdown();
         }
@@ -483,6 +600,12 @@ namespace google_chat_desktop
             webView.Reload();
         }
 
+        private void TreatDmAsSpecial_Click(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.TreatDmAsSpecial = MenuTreatDmAsSpecial.IsChecked;
+            Properties.Settings.Default.Save();
+        }
+
         private void OfficialGitHub_Click(object sender, RoutedEventArgs e)
         {
             Process.Start(new ProcessStartInfo
@@ -497,6 +620,10 @@ namespace google_chat_desktop
             AboutPanel.ShowAbout();
         }
 
+        private void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsWindow.ShowSettings();
+        }
 
         private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
         {

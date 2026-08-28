@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
@@ -14,7 +14,7 @@
 		<AssemblyCopyright>© Hiyowa Records 2017-2026</AssemblyCopyright>
 		<Company>Hiyowa Records</Company>
 		<Product>Google Chat Desktop</Product>
-		<Version>3.1.0</Version>
+		<Version>3.2.0</Version>
 		<Authors>Hiyowa Kyobashi</Authors>
 		<ApplicationIcon>resources\icons\normal\windows.ico</ApplicationIcon>
 	</PropertyGroup>
@@ -45,6 +45,9 @@
 	  <None Update="Properties\Settings.settings">
 	    <Generator>SettingsSingleFileGenerator</Generator>
 	    <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+	  </None>
+	  <None Update="resources\audio\dm.mp3">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Update="resources\icons\badge\windows.ico">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
