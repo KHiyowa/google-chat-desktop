@@ -9,6 +9,7 @@ You may use this app as you wish, but we do not promise ongoing maintenance.
 
 ### What's new in v3.2.0
 
+* Prevent missing DMs (Beta) - Added option to treat direct messages with distinct notification sound, window flashing, and reminder toast
 * Fixed notification capture to adapt to Google Chat's updated internal notification mechanism
 * Fixed avatar icon display for Windows Toast notifications
 * Fixed notification click routing to focus and open the specific chat/room
