@@ -9,6 +9,7 @@ namespace google_chat_desktop.main.features
             InitializeComponent();
             TxtOpeningBrackets.Text = Properties.Settings.Default.OpeningBrackets;
             TxtClosingBrackets.Text = Properties.Settings.Default.ClosingBrackets;
+            TxtIgnoredWords.Text = Properties.Settings.Default.IgnoredWords;
         }
 
         public static void ShowSettings()
@@ -24,6 +25,7 @@ namespace google_chat_desktop.main.features
         {
             Properties.Settings.Default.OpeningBrackets = TxtOpeningBrackets.Text;
             Properties.Settings.Default.ClosingBrackets = TxtClosingBrackets.Text;
+            Properties.Settings.Default.IgnoredWords = TxtIgnoredWords.Text;
             Properties.Settings.Default.Save();
             this.Close();
         }

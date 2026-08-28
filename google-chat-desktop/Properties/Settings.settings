@@ -21,10 +21,13 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="OpeningBrackets" Type="System.String" Scope="User">
-      <Value Profile="(Default)">(</Value>
+      <Value Profile="(Default)">([「【（［</Value>
     </Setting>
     <Setting Name="ClosingBrackets" Type="System.String" Scope="User">
-      <Value Profile="(Default)">)</Value>
+      <Value Profile="(Default)">)]」】）］</Value>
+    </Setting>
+      <Setting Name="IgnoredWords" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>

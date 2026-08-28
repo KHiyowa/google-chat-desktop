@@ -15,6 +15,7 @@ namespace google_chat_desktop
 {
     public partial class MainWindow : Window
     {
+
         private static MainWindow? instance;
         private static readonly Lock lockObject = new();
         private static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -70,6 +71,17 @@ namespace google_chat_desktop
 
             // 設定値をメニューのチェック状態に反映
             MenuTreatDmAsSpecial.IsChecked = Properties.Settings.Default.TreatDmAsSpecial;
+
+            // 初期設定が "(" と ")" のままの場合は新しいデフォルト値に更新
+            if (string.IsNullOrEmpty(Properties.Settings.Default.OpeningBrackets) || Properties.Settings.Default.OpeningBrackets == "(")
+            {
+                Properties.Settings.Default.OpeningBrackets = "([「【（［";
+            }
+            if (string.IsNullOrEmpty(Properties.Settings.Default.ClosingBrackets) || Properties.Settings.Default.ClosingBrackets == ")")
+            {
+                Properties.Settings.Default.ClosingBrackets = ")]」】）］";
+            }
+            Properties.Settings.Default.Save();
         }
 
         private async void InitializeWebView()
@@ -287,6 +299,7 @@ namespace google_chat_desktop
         {
             // Beta: DM判定（タイトル末尾に "(ルーム名)" が無い場合はDMの可能性が高いとみなしてウィンドウを点滅させる）
             bool isDm = false;
+
             if (Properties.Settings.Default.TreatDmAsSpecial)
             {
                 string open = Properties.Settings.Default.OpeningBrackets ?? "(";
@@ -299,11 +312,31 @@ namespace google_chat_desktop
                 {
                     string o = System.Text.RegularExpressions.Regex.Escape(open[i].ToString());
                     string c = System.Text.RegularExpressions.Regex.Escape(close[i].ToString());
-                    patterns.Add($"{o}.+{c}");
+                    patterns.Add($"{o}[^{c}]+{c}");
                 }
 
-                string combinedPattern = patterns.Count > 0 ? $"({string.Join("|", patterns)})" : @"(.+)";
-                isDm = !System.Text.RegularExpressions.Regex.IsMatch(title, $@"s[‎‏]*{combinedPattern}[‎‏]*$");
+                string combinedPattern = patterns.Count > 0 ? $"({string.Join("|", patterns)})" : @"\([^\)]+\)";
+                bool isRoom = System.Text.RegularExpressions.Regex.IsMatch(title, $@"[^\S\r\n]*[\u200E\u200F]*{combinedPattern}[\u200E\u200F]*$");
+                isDm = !isRoom;
+
+                // 除外キーワード（リアクションなど）が含まれている場合はDM判定から除外
+                if (isDm && !string.IsNullOrWhiteSpace(Properties.Settings.Default.IgnoredWords))
+                {
+                    var keywords = Properties.Settings.Default.IgnoredWords
+                        .Split(new[] { ',', '、', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(k => k.Trim())
+                        .Where(k => !string.IsNullOrEmpty(k));
+
+                    foreach (var keyword in keywords)
+                    {
+                        if (message.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                            title.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isDm = false;
+                            break;
+                        }
+                    }
+                }
             }
 
             if (isDm)
