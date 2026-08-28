@@ -20,6 +20,7 @@
     <sys:String x:Key="Settings_ClosingBrackets">閉じカッコ:</sys:String>
     <sys:String x:Key="Settings_Save">保存</sys:String>
     <sys:String x:Key="Settings_Cancel">キャンセル</sys:String>
+    <sys:String x:Key="Settings_Reset">初期値に戻す</sys:String>
     <sys:String x:Key="Settings_IgnoredWordsDescription">メッセージ本文に含まれている場合にDM判定から除外するキーワード（リアクション等）をカンマ区切りで指定します。</sys:String>
     <sys:String x:Key="Settings_IgnoredWords">除外キーワード:</sys:String>
 </ResourceDictionary>

@@ -20,6 +20,7 @@
     <sys:String x:Key="Settings_ClosingBrackets">Closing Brackets:</sys:String>
     <sys:String x:Key="Settings_Save">Save</sys:String>
     <sys:String x:Key="Settings_Cancel">Cancel</sys:String>
+    <sys:String x:Key="Settings_Reset">Restore Defaults</sys:String>
     <sys:String x:Key="Settings_IgnoredWordsDescription">Specify words (separated by comma) in message body to exclude from DM notifications (e.g. reactions).</sys:String>
     <sys:String x:Key="Settings_IgnoredWords">Exclude Keywords:</sys:String>
 </ResourceDictionary>

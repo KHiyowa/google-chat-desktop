@@ -1,3 +1,4 @@
+using System.Configuration;
 using System.Windows;
 
 namespace google_chat_desktop.main.features
@@ -19,6 +20,13 @@ namespace google_chat_desktop.main.features
                 Owner = System.Windows.Application.Current.MainWindow
             };
             window.ShowDialog();
+        }
+
+        private void Reset_Click(object sender, RoutedEventArgs e)
+        {
+            TxtOpeningBrackets.Text = Properties.Settings.Default.Properties["OpeningBrackets"]?.DefaultValue as string ?? "";
+            TxtClosingBrackets.Text = Properties.Settings.Default.Properties["ClosingBrackets"]?.DefaultValue as string ?? "";
+            TxtIgnoredWords.Text = Properties.Settings.Default.Properties["IgnoredWords"]?.DefaultValue as string ?? "";
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)

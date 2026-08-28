@@ -33,9 +33,12 @@
             <TextBox x:Name="TxtIgnoredWords" Width="240"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="{DynamicResource Settings_Save}" Click="Save_Click" Width="80" Margin="0,0,10,0"/>
-            <Button Content="{DynamicResource Settings_Cancel}" Click="Cancel_Click" Width="80"/>
-        </StackPanel>
+        <Grid Grid.Row="6">
+            <Button Content="{DynamicResource Settings_Reset}" Click="Reset_Click" HorizontalAlignment="Left" Padding="8,3"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="{DynamicResource Settings_Save}" Click="Save_Click" Width="80" Margin="0,0,10,0"/>
+                <Button Content="{DynamicResource Settings_Cancel}" Click="Cancel_Click" Width="80"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

@@ -79,17 +79,6 @@ namespace google_chat_desktop
 
             // 設定値をメニューのチェック状態に反映
             MenuTreatDmAsSpecial.IsChecked = Properties.Settings.Default.TreatDmAsSpecial;
-
-            // 初期設定が "(" と ")" のままの場合は新しいデフォルト値に更新
-            if (string.IsNullOrEmpty(Properties.Settings.Default.OpeningBrackets) || Properties.Settings.Default.OpeningBrackets == "(")
-            {
-                Properties.Settings.Default.OpeningBrackets = "([「【（［";
-            }
-            if (string.IsNullOrEmpty(Properties.Settings.Default.ClosingBrackets) || Properties.Settings.Default.ClosingBrackets == ")")
-            {
-                Properties.Settings.Default.ClosingBrackets = ")]」】）］";
-            }
-            Properties.Settings.Default.Save();
         }
 
         private async void InitializeWebView()
